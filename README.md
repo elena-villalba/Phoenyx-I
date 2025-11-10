@@ -173,7 +173,7 @@ ros2 launch osr_gazebo maze_simulation.launch.py maze:=maze_2.world
 ros2 launch osr_gazebo maze_simulation.launch.py maze:=maze_3.world
 
 # Terminal 2 - Run the control challenge node
-ros2 run osr_control_challenge Movement_vel
+ros2 run osr_control_challenge maze_navigation
 ```
 
 #### Guidance Task
