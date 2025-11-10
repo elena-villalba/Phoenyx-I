@@ -1,4 +1,3 @@
-<!-- 🚨 TODO: Replace with your project logo --> 
 <p align="center">
   <img src="resources/PHOENYX-1-logo-recortado.png" alt="Project Logo"/>
 </p>
@@ -110,53 +109,75 @@ To ensure safty, the system loads a predifined `map` to keep the robot within fi
 
 ## 📁 Repository Structure
 
-The repository includes two main branches: 
-- `main`: Real robot deployment
-- `simulation`: Gazebo-based testbed
-
-### Main branch:
-
 ```bash
 ├── src/
-    .
-    ├── osr_bringup/         # Basic launch files and configuration for the OSR
-    ├── percepcion/          # Image recognition, color and digit detection
-    ├── guiado/              # SLAM-based localization and waypoint navigation
-    ├── osr_control/         # roboclaw (motor driver) interface - comunication and kinematics
-    ├── osr_interfaces/      # Custom ROS mesages
-    ├── phoenyx_nodes/       # Multiple nodes for diferent tasks and applications
-    ├── planificador/        # Package for custom launch and yaml config.
-    ├── ydlidar_ros2_driver/ # LiDAR SDK
-    └── OrbbekSDK_ROS2/      # Orbbec camera driver
+│   ├── osr_bringup/            # Basic launch files and configuration for the OSR
+│   ├── osr_control/            
+│   ├── osr_control_challenge/  # Code for the control task
+│   ├── osr_gazebo/             # Simulation environment for Gazebo
+│   ├── osr_interfaces/         # Custom ROS messages
+│   ├── percepcion/             # Image recognition, color and digit detection
+│   ├── phoenyx_nodes/          # Multiple nodes for different tasks and applications
+│   ├── planificador/           # Package for custom launch and YAML configuration
+│   ├── guiado/                 # SLAM-based localization and waypoint navigation
+│   ├── control/                
+│   ├── datos/                  
+│   └── final/                  
+│
+├── LICENSE.md
+├── JPL_NASA_LICENCE.txt
+└── README.md
+
 ```
 
-### Simulation branch:
-
-```bash
-├── src/
-    .
-    ├── osr_gazebo/ # Worlds, models & scenarios
-    ├── [same as above...]   
-```
 ## 🚦 How to Run the System
 
 ### 🧪 In Simulation 
 
-#### Control Task 
+#### Empty Worlds
 ```bash
-# Terminal 1 - Launch simulation world
-ros2 launch osr_gazebo world.launch.py
+# Launch an empty world on gazebo with the rover model
+ros2 launch osr_gazebo empty_world.launch.py
 
-# Terminal 2 - Launch SLAM
-ros2 launch slam_toolbox online_async_launch.py use_sim_time:=true
+# Launch an empty world on gazebo with the simplified model of the rover model
+ros2 launch osr_gazebo empty_world_simplified.launch.py
 
-# Terminal 3 - Launch Nav2
-ros2 launch planificador planificador_launch.py use_sim_time:=true
+# Launch rviz with the rover model
+ros2 launch osr_gazebo rviz.launch.py
 
-# Terminal 4 - Launch LiDAR-based control node
-ros2 launch control linea_media.launch.py use_sim_time:=true
+# Launch rviz with the simplified model of the rover model
+ros2 launch osr_gazebo rviz_simplified.launch.py 
 ```
+
+### Move With a Controller
+```bash
+# With an open gazebo world with the rover model you can use a controller to move it
+ros2 launch osr_bringup joystick_launch.py 
+```
+
+#### Control Task (Without Nav2)
+This mode is used to evaluate the rover’s control and navigation behavior inside a **maze environment**.
+Three maze worlds are provided, each with different layouts and difficulty levels.
+
+Available maze worlds:
+- maze_1.world — basic layout, suitable for tuning and testing.
+- maze_2.world — intermediate complexity.
+- maze_3.world — advanced maze for full control evaluation.
+
+```bash
+# Terminal 1 - Launch the simulation world with the desired maze
+ros2 launch osr_gazebo maze_simulation.launch.py maze:=maze_1.world
+# or
+ros2 launch osr_gazebo maze_simulation.launch.py maze:=maze_2.world
+# or
+ros2 launch osr_gazebo maze_simulation.launch.py maze:=maze_3.world
+
+# Terminal 2 - Run the control challenge node
+ros2 run osr_control_challenge Movement_vel
+```
+
 #### Guidance Task
+
 ```bash
 # Terminal 1 - Launch simulation world
 ros2 launch osr_gazebo circuito_arucos.launch.py
@@ -174,14 +195,19 @@ ros2 run guiado brain_guiado.py use_sim_time:=true
 ros2 topic pub --once /aruco_scan std_msgs/Bool "{data: true}"
 
 ```
-## 🤖 On Real Robot 
+
+### 🤖 On Real Robot 
 #### For percepcion task
 ``` bash
-ros2 launch prueba_percepcion.launch.py 
+ros2 launch prueba2_percepcion.launch.py 
 ```
 #### For control task 
 ```bash
+# Terminal 1 
 ros2 launch control control.launch.py
+
+# Terminal 2
+ros2 launch control planificador.launch.py
 ```
 #### For guiado task 
 ```bash
