@@ -166,11 +166,11 @@ Available maze worlds:
 
 ```bash
 # Terminal 1 - Launch the simulation world with the desired maze
-ros2 launch osr_gazebo maze_simulation.launch.py maze:=maze_1.world
+ros2 launch osr_bringup maze_simulation.launch.py maze:=maze_1.world
 # or
-ros2 launch osr_gazebo maze_simulation.launch.py maze:=maze_2.world
+ros2 launch osr_bringup maze_simulation.launch.py maze:=maze_2.world
 # or
-ros2 launch osr_gazebo maze_simulation.launch.py maze:=maze_3.world
+ros2 launch osr_bringup maze_simulation.launch.py maze:=maze_3.world
 
 # Terminal 2 - Run the control challenge node
 ros2 run osr_control_challenge maze_navigation
