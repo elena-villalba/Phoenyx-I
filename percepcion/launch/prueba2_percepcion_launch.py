@@ -19,35 +19,35 @@ def load_yaml(file_path, namespace):
 def generate_launch_description():
     osr_bringup_dir = get_package_share_directory('osr_bringup')
     osr_mod_launch = os.path.join(osr_bringup_dir, 'launch', 'osr_mod_launch.py')
-    
-    percepcion_config = os.path.join(
-        get_package_share_directory('percepcion'),
-        'config',
-        'lectura_cam.yaml'
-    )
-    orbbec_params = load_yaml(percepcion_config, "orbbec_camera_launch")
-    bringup = os.path.join(
-        get_package_share_directory('osr_bringup'),
-        'launch',
-        'osr_mod_launch.py'
-    )
+
+    # percepcion_config = os.path.join(
+    #     get_package_share_directory('percepcion'),
+    #     'config',
+    #     'lectura_cam.yaml'
+    # )
+
+    # orbbec_params = load_yaml(percepcion_config, "orbbec_camera_launch")
+
+    # bringup = os.path.join(
+    #     get_package_share_directory('osr_bringup'),
+    #     'launch',
+    #     'osr_mod_launch.py'
+    # )
     return LaunchDescription([
         # Incluir el launch de osr_mod_launch
         # IncludeLaunchDescription(
         #     PythonLaunchDescriptionSource(osr_mod_launch)
         # ),
         # Nodos adicionales no incluidos en osr_mod_launch
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(bringup)
-        ),
-        Node(
-            package="orbbec_camera",
-            executable="orbbec_camera_node",
-            name="ob_camera_node",
-            namespace='camera',
-            parameters=[orbbec_params],
-            output="screen",
-        ),
+        # IncludeLaunchDescription(
+            # PythonLaunchDescriptionSource(bringup)
+        # ),
+        # Node(
+        #     package="percepcion",
+        #     executable="realsense_run",
+        #     name="realsense_run",
+        #     output="screen",
+        # ),
         # Node(
         #     package='phoenyx_nodes',
         #     executable='imu_pub',
@@ -55,19 +55,19 @@ def generate_launch_description():
         #     output='screen',
         #     emulate_tty=True,
         # ),
-        Node(
-            package='percepcion',
-            executable='dar_vueltas',
-            name='dar_vueltas',
-            output='screen',
-            emulate_tty=True,
-        ),
+        # Node(
+        #     package='percepcion',
+        #     executable='dar_vueltas',
+        #     name='dar_vueltas',
+        #     output='screen',
+        #     emulate_tty=True,
+        # ),
         Node(
             package='percepcion',
             executable='brain_percepcion',
             name='brain_percepcion',
             output='screen',
             emulate_tty=True,
-            parameters=[percepcion_config],
+            parameters=[{"show_gui": True}]
         )
     ])
