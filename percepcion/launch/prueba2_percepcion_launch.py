@@ -68,6 +68,6 @@ def generate_launch_description():
             name='brain_percepcion',
             output='screen',
             emulate_tty=True,
-            parameters=[{"show_gui": True}]
+            parameters=[{"show_gui": False}]
         )
     ])

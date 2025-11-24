@@ -11,6 +11,7 @@ from sensor_msgs.msg import Image
 from std_msgs.msg import Int32
 from cv_bridge import CvBridge
 import pyrealsense2 as rs
+import threading   # ← Para el hilo continuo
 
 from percepcion.Recorte2number import Recorte2number
 from percepcion.Img2recorte import image2recorte
@@ -20,17 +21,14 @@ class BrainIntelNode(Node):
     def __init__(self):
         super().__init__('brain_intel_node')
 
-        # ------------------ Parámetros (configurables) ------------------
+        # ------------------ Parámetros ------------------
         self.declare_parameters(namespace='', parameters=[
             ('numero_muestras', 10),
-            ('show_gui', False),   # si quieres ver ventana OpenCV
-            ('debug', False)       # si quieres que guarde imágenes
+            ('show_gui', False),
+            ('debug', False)
         ])
-        try:
-            self.numero_muestras = int(self.get_parameter('numero_muestras').value)
-        except Exception:
-            self.numero_muestras = 10
 
+        self.numero_muestras = int(self.get_parameter('numero_muestras').value)
         self.show_gui = bool(self.get_parameter('show_gui').value)
         self.debug = bool(self.get_parameter('debug').value)
 
@@ -54,22 +52,17 @@ class BrainIntelNode(Node):
         self.numero_final = 0
         self.color_final = ""
         self.ini_time = time.time()
+        self.last_time = time.time()   
+        self.fps = 0.0                 
         self.numero_really = 5
         self.i = 0
         self._reset_deadline = None
 
-        # Contador para frames perdidos (logado periódicamente)
-        self._dropped_frames = 0
-        self._last_drop_log = 0.0
-
-        # Imagen para mostrar (solo una ventana OpenCV opcional)
-        self.display_frame = None
-
-        # Carpeta para guardar imágenes (solo si debug=True)
+        # Carpeta debug
         self._img_dir = os.path.join('percepcion', 'imagenes')
         os.makedirs(self._img_dir, exist_ok=True)
 
-        # ------------------ RealSense ------------------
+        # ------------------ Inicializar RealSense ------------------
         try:
             self.pipe = rs.pipeline()
             self.cfg = rs.config()
@@ -83,73 +76,97 @@ class BrainIntelNode(Node):
             self.camera_ready = False
             self.pipe = None
 
-        # ------------------ Timers ------------------
-        # Timer de captura (20 Hz - cada 0.05s). Con wait_for_frames timeout reducido -> menos bloqueo.
-        self.timer = self.create_timer(0.05, self.timer_callback)
-        # Timer FSM (5 Hz)
-        self.fsm_timer = self.create_timer(0.2, self.FSM)
+        # ------------------ Hilo de captura continua ------------------
+        # Flag para parar el hilo al destruir el nodo
+        self._running = True
 
-    # -------------------- Lectura de cámara --------------------
-    def timer_callback(self):
-        if not self.camera_ready or self.pipe is None:
+        # El hilo llama a self.camera_loop()
+        self.capture_thread = threading.Thread(
+            target=self.camera_loop,
+            daemon=True
+        )
+        self.capture_thread.start()
+        self.get_logger().info("Hilo de captura iniciado.")
+
+        # ------------------ Timer para la FSM ------------------
+        # Solo necesitamos esto, no timers de cámara
+        self.fsm_timer = self.create_timer(0.001, self.FSM)
+
+    # ============================================================================================
+    #                                   LOOP CONTINUO REALSENSE
+    # ============================================================================================
+    def camera_loop(self):
+        
+        if not self.camera_ready:
+            self.get_logger().error("No se puede iniciar camera_loop: cámara no lista")
             return
 
-        try:
-            # Reducimos el timeout a 50 ms para evitar bloqueos largos.
-            # Si la cámara no responde en ese tiempo, se continúa el loop rápidamente.
+        while self._running:
             try:
-                frames = self.pipe.wait_for_frames(timeout_ms=50)
-            except Exception as e:
-                # contabilizamos frame perdido y seguimos; no queremos bloquear todo el nodo.
-                self._dropped_frames += 1
+                # Espera frame con timeout pequeño (evita congelaciones)
+                frames = self.pipe.wait_for_frames(timeout_ms=1000)
+                color_frame = frames.get_color_frame()
+                if not color_frame:
+                    continue
+
+                # Convertir a array np
+                color_image = np.asanyarray(color_frame.get_data())
+
+                # ---------------------------------------------------------------------
+                # CALCULAR FPS
+                # ---------------------------------------------------------------------
                 now = time.time()
-                # log cada 2s si hay drops continuos
-                if now - self._last_drop_log > 2.0:
-                    self.get_logger().warning(f"Frames perdidos / retrasos cámara: {self._dropped_frames}")
-                    self._last_drop_log = now
-                return
+                dt = now - self.last_time
+                if dt > 0:
+                    self.fps = 1.0 / dt
+                self.last_time = now
 
-            color_frame = frames.get_color_frame()
-            if not color_frame:
-                # si no hay color frame, contabilizar y salir
-                self._dropped_frames += 1
-                now = time.time()
-                if now - self._last_drop_log > 2.0:
-                    self.get_logger().warning(f"Frames sin color devueltos: {self._dropped_frames}")
-                    self._last_drop_log = now
-                return
+                # ---------------------------------------------------------------------
+                # TEXTO SOBRE LA IMAGEN
+                # Muestra: Color: X // Numero: Y // FPS: Z
+                # ---------------------------------------------------------------------
+                mensaje = f"Color: {self.color_final} // Numero: {self.numero_final} // FPS: {self.fps:.1f}"
 
-            color_image = np.asanyarray(color_frame.get_data())
+                cv2.putText(
+                    color_image,
+                    mensaje,
+                    (20, 40),                       # posición
+                    cv2.FONT_HERSHEY_SIMPLEX,       # fuente
+                    0.8,                            # tamaño
+                    (0, 255, 0),                    # verde
+                    2                               # grosor
+                )
+                # ---------------------------------------------------------------------
 
-            # Publicar imagen ROS (intenta y registra fallo si lo hay)
-            try:
-                ros_img = self.br_rgb.cv2_to_imgmsg(color_image, encoding='bgr8')
-                self.intel_pub.publish(ros_img)
-            except Exception as e:
-                self.get_logger().warning(f"Error publicando imagen ROS: {e}")
-
-            # Procesamos si el estado lo permite
-            if self.enable_muestras:
-                self.tratar_recorte(color_image)
-
-            # ------------------ Mostrar imagen (opcional) ------------------
-            if self.show_gui:
-                frame_to_show = self.display_frame if self.display_frame is not None else color_image
+                # Publicar imagen ROS
                 try:
-                    cv2.imshow("RGB", frame_to_show)
-                    # waitKey(1) necesario para refrescar ventana; es mínimo pero opcional según show_gui
-                    cv2.waitKey(1)
+                    ros_img = self.br_rgb.cv2_to_imgmsg(color_image, encoding='bgr8')
+                    self.intel_pub.publish(ros_img)
                 except Exception as e:
-                    # Sólo logueamos el problema y desactivamos la GUI para evitar microcongelaciones repetidas.
-                    self.get_logger().warning(f"No se puede mostrar ventana OpenCV (desactivando GUI): {e}")
-                    self.show_gui = False
+                    self.get_logger().warning(f"Error publicando imagen ROS: {e}")
 
-        except Exception as e:
-            self.get_logger().error(f"Error cámara: {e}")
-            traceback.print_exc()
+                # Procesar muestras SOLO si la FSM lo permite
+                if self.enable_muestras:
+                    self.tratar_recorte(color_image)
 
-    # -------------------- Procesamiento de la imagen --------------------
+                # Mostrar ventana si el usuario lo activó
+                if self.show_gui:
+                    cv2.imshow("RGB", color_image)
+                    cv2.waitKey(1)
+
+            except Exception as e:
+                self.get_logger().error(f"Error en camera_loop: {e}")
+                traceback.print_exc()
+
+        self.get_logger().info("camera_loop detenido correctamente.")
+
+    # ============================================================================================
+    #                                   PROCESAMIENTO DE IMAGEN
+    # ============================================================================================
     def tratar_recorte(self, image):
+        """
+        Procesa un frame para extraer número y color.
+        """
         try:
             res = self.converter.obtener_colorYnum(image)
         except Exception as e:
@@ -157,20 +174,15 @@ class BrainIntelNode(Node):
             traceback.print_exc()
             return
 
-        # Aceptamos que obtener_colorYnum pueda devolver None o tupla parcial
         if not res or not isinstance(res, tuple):
             return
 
         numero, color, img_thresh = res
 
-        # número puede ser None si no se detectó nada
         if numero is not None:
             self.numeros.append(numero)
-
             print(f"[DETECCIÓN] Número detectado: {numero}, Color: {color}")
 
-
-            # Guardar sólo si img_thresh es imagen válida y número distinto del real y debug=True
             if self.debug and numero != self.numero_really and isinstance(img_thresh, np.ndarray):
                 filename = os.path.join(self._img_dir, f"{self.numero_really}_{numero}_{self.i}.png")
                 try:
@@ -179,27 +191,14 @@ class BrainIntelNode(Node):
                     self.get_logger().warning(f"No se pudo escribir imagen {filename}: {e}")
             self.i += 1
 
-            # Crear imagen con texto (no bloqueante)
-            try:
-                display_img = cv2.resize(image, (640, 480))
-                display_text = f"Num: {numero}"
-                if color:
-                    display_text += f", Color: {color}"
-
-                cv2.putText(display_img, display_text, (50, 50),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 0), 3)
-
-                self.display_frame = display_img
-            except Exception as e:
-                self.get_logger().warning(f"Error formando display_frame: {e}")
-
-        # Guardar color si viene definido
         if color:
             self.colores.append(color)
 
         self.conteo_muestras += 1
 
-    # -------------------- Decisión final --------------------
+    # ============================================================================================
+    #                                   DECISIÓN FINAL
+    # ============================================================================================
     def decision_making(self):
         if not self.numeros:
             return 0, "Distractorio"
@@ -216,15 +215,21 @@ class BrainIntelNode(Node):
         color = max(counts, key=counts.get)
         return numero, color
 
-    # -------------------- FSM --------------------
+    # ============================================================================================
+    #                                   FSM DEL SISTEMA
+    # ============================================================================================
     def FSM(self):
+        """
+        Lógica de la máquina de estados.
+        Solo se ejecuta desde un timer (no bloqueante).
+        """
         try:
-            if self.estado == 1:      # RECOLECCIÓN
+            if self.estado == 1:  # RECOLECCIÓN
                 self.enable_muestras = True
                 if self.conteo_muestras >= self.numero_muestras or (time.time() - self.ini_time) >= 40:
                     self.estado = 2
 
-            elif self.estado == 2:    # PROCESADO
+            elif self.estado == 2:  # PROCESADO
                 self.enable_muestras = False
                 self.numero_final, self.color_final = self.decision_making()
 
@@ -237,58 +242,64 @@ class BrainIntelNode(Node):
                     msg.data = 0
 
                 self.pub_vueltas.publish(msg)
-
-                # acortamos la espera para que no pare demasiado el procesamiento
                 self._reset_deadline = time.time() + 0.2
                 self.estado = 3
 
-            elif self.estado == 3:    # ESPERA NO BLOQUEANTE
+            elif self.estado == 3:  # ESPERA
                 if time.time() >= self._reset_deadline:
                     self.numeros.clear()
                     self.colores.clear()
                     self.conteo_muestras = 0
                     self.ini_time = time.time()
-                    self.display_frame = None
                     self.estado = 1
+
         except Exception as e:
             self.get_logger().error(f"Error en FSM: {e}")
             traceback.print_exc()
 
-    # -------------------- Destructor --------------------
+    # ============================================================================================
+    #                                   DESTRUCTOR
+    # ============================================================================================
     def destroy_node(self):
-        try:
-            if getattr(self, 'pipe', None) is not None and self.camera_ready:
-                try:
-                    self.pipe.stop()
-                except Exception as e:
-                    self.get_logger().warning(f"Error parando RealSense: {e}")
-        except Exception:
-            pass
+        """
+        Se ejecuta al cerrar ROS2.
+        Para el hilo, cierra cámara y cierra ventanas.
+        """
+        self.get_logger().info("Finalizando nodo...")
 
+        # Pedimos que el hilo termine
+        self._running = False
+        time.sleep(0.1)
+
+        # Parar RealSense
+        try:
+            if self.camera_ready and self.pipe:
+                self.pipe.stop()
+        except Exception as e:
+            self.get_logger().warning(f"Error parando RealSense: {e}")
+
+        # Cerrar ventanas
         try:
             cv2.destroyAllWindows()
-        except Exception:
+        except:
             pass
 
         try:
             super().destroy_node()
-        except Exception:
+        except:
             pass
 
 
-# -------------------- MAIN --------------------
+# ------------------------------------------ MAIN ------------------------------------------
 def main(args=None):
     rclpy.init(args=args)
     node = BrainIntelNode()
     try:
-        rclpy.spin(node)
+        rclpy.spin(node)   # ROS2 ejecuta timers y callbacks
     except KeyboardInterrupt:
         pass
     finally:
-        try:
-            node.destroy_node()
-        except Exception:
-            pass
+        node.destroy_node()
         rclpy.shutdown()
 
 
