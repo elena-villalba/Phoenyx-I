@@ -126,7 +126,7 @@ The complete software stack (ROS 2, system dependencies, drivers, and workspace 
 
 1. Download the installation script
    ```bash
-   $ wget https://raw.githubusercontent.com/PUCRA/Phoenyx/main/scripts/install_rpi.sh
+   $ wget https://raw.githubusercontent.com/elena-villalba/Phoenyx-I/refs/heads/main/scripts/install_rpi.sh
    ```
 2. Make the installation script executable:
    ```bash
