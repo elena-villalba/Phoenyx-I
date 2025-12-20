@@ -47,6 +47,7 @@ Phoenyx I demonstrates how high-performance autonomy can be achieved using **acc
 
 ## 📦 Jump to:
 
+- [🚀 Quick Start ](#-quick-srtart)
 - [🎯 Competition Challenges Overview](#-competition-challenge-overview)
 - [🛠️ Development Environment](#%EF%B8%8F-development-environment)
 - [📂 Repo Structure](#-repository-structure)
@@ -54,6 +55,16 @@ Phoenyx I demonstrates how high-performance autonomy can be achieved using **acc
 - [🏁 Competition Results](#-competition-results)
 - [🤝 Want to Collaborate?](#-want-to-collaborate)
 - [🌐 Join & Follow Us](#-join--follow-us)
+
+## 🚀 Quick Start 
+
+### Raspberry Pi
+
+To run Phoenyx I on the real robot, you first need to set up the onboard Raspberry Pi.
+
+👉 **Follow the complete Raspberry Pi setup guide here:**  
+➡️ [`docs/RASPBERRY_PI_SETUP.md`](docs/RASPBERRY_PI_SETUP.md)
+
 
 ## 🎯 Competition Challenge Overview
 The **SENER-CEA's Bot Talent** competition features a serie of challenges focused on **AMRs (Autonomus Mobile Robots)**, in which universities from across Spain compete by completing some tasks using an open source Rover. Our team successfully tackled all the proposed challenges:
