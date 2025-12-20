@@ -63,7 +63,7 @@ Phoenyx I demonstrates how high-performance autonomy can be achieved using **acc
 To run Phoenyx I on the real robot, you first need to set up the onboard Raspberry Pi.
 
 👉 **Follow the complete Raspberry Pi setup guide here:**  
-➡️ [`docs/RASPBERRY_PI_SETUP.md`](docs/RASPBERRY_PI_SETUP.md)
+➡️ [`docs/raspberry_pi_setup.md`](docs/raspberry_pi_setup.md)
 
 
 ## 🎯 Competition Challenge Overview
