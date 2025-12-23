@@ -1,262 +1,295 @@
-import sklearn
 import joblib
 import os
 import cv2
 import numpy as np
-import pytesseract  
+
 
 
 class Recorte2number():
     def __init__(self):
+        # Path to the trained KNN model (expanded to the user's home directory)
         ruta = os.path.expanduser("~/Phoenyx/src/percepcion/percepcion/final_knn.pkl")
+        # Load the trained KNN classifier
         self.knn = joblib.load(ruta)
-        self.prev_num = 0
 
+        # Temporal memory to avoid bounding box flickering between frames
+        self.prev_bbox = None
+        # Temporal smoothing factor (higher = more stable, lower = more responsive)
+        self.alpha = 0.7   # temporal smoothing coefficient
 
-    def obtener_num(self, image, log_level=0):
-        """Preprocesa la imagen y extrae un número usando OCR."""
-        try:
-            image = cv2.bitwise_not(image)
-            config = '--psm 10 -c tessedit_char_whitelist=12346789'
-            number = pytesseract.image_to_string(image, config=config).strip()
-
-            data_list = pytesseract.image_to_data(image, config=config, output_type=pytesseract.Output.DICT)
-            confidences = [c for c in data_list['conf'] if c != -1]
-
-            average_confidence = sum(confidences) / len(confidences) if len(confidences) > 0 else 0
-
-            if not number or average_confidence < 1:
-                return None
-
-            return int(number[0])
-
-        except Exception as e:
-            print(f"Ocurrió un error: {e}")
-            return None
-
-
-    def detectar_color_bgr(self, numero_cuadrado):
-        """Detecta la probabilidad de ser rojo o azul basándose en los canales BGR."""
-        bgr_image = numero_cuadrado
-
-        avg_b = np.mean(bgr_image[:, :, 0])  # azul
-        avg_g = np.mean(bgr_image[:, :, 1])  # verde (antes ponía rojo → ERROR)
-        avg_r = np.mean(bgr_image[:, :, 2])  # rojo
-
-        max_value = max(avg_b, avg_g, avg_r)
-
-        if max_value == avg_b and avg_g < 130 and avg_r < 130:
-            return "Azul"
-        elif max_value == avg_r and avg_g < 130 and avg_b < 130:
-            return "Rojo"
-        else:
-            return "Indefinido"
-
-
+    # ============================================================================================
+    #                                   KNN
+    # ============================================================================================
     def obtener_knn_num(self, img_thresh):
-        # Si pide la Knn 784 es un 28 x 28, si pide 2500 es 50 x 50
+        # Resize the binary image to the size expected by the KNN
         img_resized = cv2.resize(img_thresh, (50, 50), interpolation=cv2.INTER_AREA)
+        # Flatten the image into a 1D feature vector
         img_flat = img_resized.reshape(1, -1)
+        # Predict and return the digit using the trained KNN
         return self.knn.predict(img_flat)[0]
 
-
+    # ============================================================================================
+    #                                   MAIN PIPELINE
+    # ============================================================================================
     def obtener_colorYnum(self, image):
-        """
-        Detecta el color de la cartulina, extrae el número y devuelve una imagen:
-            - Fondo negro
-            - Número blanco, totalmente relleno
-            - Tamaño 50x50 para KNN
-        """
-
         try:
-            # -----------------------------
-            # DETECCIÓN DEL COLOR
-            # -----------------------------
+            # Validate input image
+            if image is None or image.size == 0:
+                return None, "Indefinido", None
+
+            # ==================================================
+            # COLOR DETECTION
+            # ==================================================
+            # Convert image from BGR to HSV color space
             hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
+            # Define HSV range for blue color
             lower_blue = np.array([100, 150, 50])
             upper_blue = np.array([140, 255, 255])
 
+            # Define HSV ranges for red color (two ranges due to hue wrap-around)
             lower_red1 = np.array([0, 150, 50])
             upper_red1 = np.array([10, 255, 255])
             lower_red2 = np.array([160, 150, 50])
             upper_red2 = np.array([180, 255, 255])
 
+            # Create binary masks for blue and red colors
             mask_blue = cv2.inRange(hsv, lower_blue, upper_blue)
-            mask_red = cv2.inRange(hsv, lower_red1, upper_red1) + cv2.inRange(hsv, lower_red2, upper_red2)
+            mask_red = (
+                cv2.inRange(hsv, lower_red1, upper_red1) +
+                cv2.inRange(hsv, lower_red2, upper_red2)
+            )
 
+            # Count how many pixels belong to each color
             blue_pixels = cv2.countNonZero(mask_blue)
             red_pixels = cv2.countNonZero(mask_red)
 
+            # Decide the dominant color and corresponding mask
             if blue_pixels > red_pixels:
+            # Count how many pixels belong to each color
                 color = "Azul"
                 mask = mask_blue
             elif red_pixels > 0:
                 color = "Rojo"
                 mask = mask_red
             else:
-                color = "Indefinido"
-                mask = mask_blue + mask_red
+                # No relevant color detected
+                return None, "Indefinido", None
 
-            # -----------------------------
-            # DETECTAR CARTULINA
-            # -----------------------------
-            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            if not contours:
+            # ==================================================
+            # CARD (COLORED BACKGROUND) DETECTION
+            # ==================================================
+            # Find contours of the detected color mask
+            cont_cart, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            if not cont_cart:
                 return None, color, None
 
-            cartulina_contour = max(contours, key=cv2.contourArea)
-            x, y, w, h = cv2.boundingRect(cartulina_contour)
-            roi_cartulina = image[y:y+h, x:x+w]
+            # Select the largest contour as the colored card
+            cartulina = max(cont_cart, key=cv2.contourArea)
+            # Compute bounding box of the card
+            x, y, w, h = cv2.boundingRect(cartulina)
+            # Extract region of interest (ROI) containing the card
+            roi = image[y:y+h, x:x+w]
 
-            # -----------------------------
-            # PROCESAR ROI DE LA CARTULINA
-            # -----------------------------
-            gray = cv2.cvtColor(roi_cartulina, cv2.COLOR_BGR2GRAY)
+            # ==================================================
+            # PREPROCESSING
+            # ==================================================
+            # Convert ROI to grayscale
+            gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
 
-            # Quitamos bordes de la cartulina (evita falsos contornos)
-            pad = int(min(w, h) * 0.05)
-            pad = max(pad, 5)
-            gray_crop = gray[pad:h-pad, pad:w-pad]
+            # Remove a small border to avoid edge artifacts
+            pad = max(int(min(w, h) * 0.05), 5)
+            gray = gray[pad:-pad, pad:-pad]
 
-            # Threshold adaptativo → número blanco, fondo negro
-            img_thresh = cv2.adaptiveThreshold(
-                gray_crop, 255,
-                cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                cv2.THRESH_BINARY_INV,
-                21, 5
+            # Validate cropped grayscale image
+            if gray.size == 0:
+                return None, color, None
+
+            # --- CORRECT THRESHOLDING (NOT INVERTED) ---
+            # Apply Otsu's binarization
+            _, img_thresh = cv2.threshold(
+                gray, 0, 255,
+                cv2.THRESH_BINARY + cv2.THRESH_OTSU
             )
 
-            # Eliminar ruido
-            kernel = np.ones((3,3), np.uint8)
-            img_thresh = cv2.morphologyEx(img_thresh, cv2.MORPH_OPEN, kernel)
+            # Light morphological cleaning to remove noise
+            kernel = np.ones((3, 3), np.uint8)
+            img_thresh = cv2.morphologyEx(img_thresh, cv2.MORPH_OPEN, kernel, iterations=1)
 
-            # -----------------------------
-            # CONTORNO DEL NÚMERO
-            # -----------------------------
-            contours_num, _ = cv2.findContours(img_thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            if not contours_num:
+            # ==================================================
+            # NUMBER BOUNDING BOX
+            # ==================================================
+            # Extract a normalized bounding box around the digit
+            numero_img = self.bounding_box(img_thresh)
+            if numero_img is None:
                 return None, color, None
 
-            # Filtrar contornos irrelevantes
-            max_area = (w * h) * 0.6
-            min_area = 200
+            # ==================================================
+            # FILL NUMBER WHILE PRESERVING HOLES (e.g., 0, 6, 8, 9)
+            # ==================================================
+            # Find contours and hierarchy to distinguish holes
+            contours, hierarchy = cv2.findContours(
+                numero_img,
+                cv2.RETR_CCOMP,
+                cv2.CHAIN_APPROX_SIMPLE
+            )
 
-            contours_num = [c for c in contours_num if min_area < cv2.contourArea(c) < max_area]
-            if not contours_num:
+            if not contours or hierarchy is None:
                 return None, color, None
 
-            numero_contour = max(contours_num, key=cv2.contourArea)
-            x_n, y_n, w_n, h_n = cv2.boundingRect(numero_contour)
+            # Create an empty image to draw the filled number
+            img_filled = np.zeros_like(numero_img)
 
-            numero_roi = img_thresh[y_n:y_n+h_n, x_n:x_n+w_n]
+            hierarchy = hierarchy[0]
 
-            # -----------------------------
-            # RELLENO COMPLETO (FLOOD FILL)
-            # -----------------------------
-            flood = numero_roi.copy()
-            hh, ww = flood.shape[:2]
+            for i, cnt in enumerate(contours):
+                # External contour (no parent)
+                if hierarchy[i][3] == -1:
+                    cv2.drawContours(img_filled, [cnt], -1, 255, thickness=cv2.FILLED)
+                # Internal contour (hole)
+                else:
+                    cv2.drawContours(img_filled, [cnt], -1, 0, thickness=cv2.FILLED)
 
-            mask = np.zeros((hh+2, ww+2), np.uint8)
-            cv2.floodFill(flood, mask, (0, 0), 255)
-
-            flood_inv = cv2.bitwise_not(flood)
-            img_filled = cv2.bitwise_or(numero_roi, flood_inv)
-
-            # -----------------------------
-            # IMAGEN FINAL 50x50
-            # -----------------------------
+            # ==================================================
+            # NORMALIZATION FOR KNN
+            # ==================================================
+            # Resize the final digit image to KNN input size
             img_final = cv2.resize(img_filled, (50, 50))
 
-            cv2.imshow("Imagen que entra al KNN", img_final)
-            cv2.waitKey(1)
+            # Reject empty images
+            if cv2.countNonZero(img_final) == 0:
+                return None, color, None
 
-            # Bounding box en imagen original
-            cv2.rectangle(
-                image,
-                (x + pad + x_n, y + pad + y_n),
-                (x + pad + x_n + w_n, y + pad + y_n + h_n),
-                (0, 255, 0), 2
-            )
-
-            # -----------------------------
-            # PREDICCIÓN KNN
-            # -----------------------------
+            # ==================================================
+            # KNN CLASSIFICATION
+            # ==================================================
+            # Predict the digit using the KNN model
             numero = self.obtener_knn_num(img_final)
 
+            # ==================================================
+            # SMOOTHED BOUNDING BOX DRAWING (VISUAL FEEDBACK)
+            # ==================================================
+            # Find contours again for visualization
+            cont_num, _ = cv2.findContours(img_thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            if cont_num:
+                cont = max(cont_num, key=cv2.contourArea)
+                bx, by, bw, bh = cv2.boundingRect(cont)
+
+                # Current bounding box in global image coordinates
+                curr_bbox = (x + pad + bx, y + pad + by, bw, bh)
+
+                # Initialize or smooth bounding box position
+                if self.prev_bbox is None:
+                    self.prev_bbox = curr_bbox
+                else:
+                    self.prev_bbox = tuple(
+                        int(self.alpha * p + (1 - self.alpha) * c)
+                        for p, c in zip(self.prev_bbox, curr_bbox)
+                    )
+
+                # Draw the smoothed bounding box
+                px, py, pw, ph = self.prev_bbox
+                cv2.rectangle(image, (px, py), (px + pw, py + ph), (0, 255, 0), 2)
+
+            # ==================================================
+            # DEBUG VISUALIZATION
+            # ==================================================
+            # Show the final image that is fed into the KNN, used when debuging
+            # cv2.imshow("Imagen que entra a la KNN (rellena)", img_final)
+            # cv2.waitKey(1)
+
+            # Return detected number, color, and processed digit image
             return numero, color, img_final
 
         except Exception as e:
-            print(f"Error en obtener_colorYnum: {e}")
+            # Catch and report any unexpected error
+            print(f"[ERROR] obtener_colorYnum: {e}")
             return None, "Indefinido", None
 
 
-
-
+    # ============================================================================================
+    #                                   ROTATED BOUNDING BOX
+    # ============================================================================================
     def ordenar_puntos_bounding_box(self, puntos):
-        suma = puntos.sum(axis=1)
-        dif = np.diff(puntos, axis=1)
-
-        ordenados = np.zeros((4, 2), dtype="float32")
-        ordenados[0] = puntos[np.argmin(suma)]
-        ordenados[2] = puntos[np.argmax(suma)]
-        ordenados[1] = puntos[np.argmin(dif)]
-        ordenados[3] = puntos[np.argmax(dif)]
-        return ordenados
-
+        # Order points of a rotated rectangle consistently (top-left, top-right, bottom-right, bottom-left)
+        s = puntos.sum(axis=1)
+        d = np.diff(puntos, axis=1)
+        rect = np.zeros((4, 2), dtype="float32")
+        rect[0] = puntos[np.argmin(s)]
+        rect[2] = puntos[np.argmax(s)]
+        rect[1] = puntos[np.argmin(d)]
+        rect[3] = puntos[np.argmax(d)]
+        return rect
 
     def bounding_box(self, binaria):
+        # Find contours in the binary image
         contornos, _ = cv2.findContours(binaria, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         if not contornos:
             return None
 
+        # Select the largest contour
         cont = max(contornos, key=cv2.contourArea)
+        # Discard very small contours (noise)
+        if cv2.contourArea(cont) < 200:
+            return None
+
+        # Compute minimum area rotated rectangle
         rect = cv2.minAreaRect(cont)
         centro, size, angulo = rect
-        ancho_rect, alto_rect = size
+        # Use the largest side to form a square
+        lado = int(max(size))
+        if lado <= 0:
+            return None
 
-        if ancho_rect > alto_rect:
-            alto_rect, ancho_rect = ancho_rect, alto_rect
-            angulo += 90
+        # Get the four corner points of the rotated rectangle
+        box = cv2.boxPoints((centro, (lado, lado), angulo))
+        box = np.intp(box)
 
-        lado_cuadrado = alto_rect
-
-        rect_cuadrado = (centro, (lado_cuadrado, lado_cuadrado), angulo)
-        box_cuadrado = cv2.boxPoints(rect_cuadrado)
-        box_cuadrado = np.intp(box_cuadrado)
-
+        # Define destination square coordinates
         destino = np.array([
             [0, 0],
-            [lado_cuadrado - 1, 0],
-            [lado_cuadrado - 1, lado_cuadrado - 1],
-            [0, lado_cuadrado - 1]
+            [lado - 1, 0],
+            [lado - 1, lado - 1],
+            [0, lado - 1]
         ], dtype="float32")
 
-        origen = self.ordenar_puntos_bounding_box(np.float32(box_cuadrado))
+        # Order source points and compute perspective transform
+        origen = self.ordenar_puntos_bounding_box(np.float32(box))
         M = cv2.getPerspectiveTransform(origen, destino)
-        enderezada = cv2.warpPerspective(binaria, M, (int(lado_cuadrado), int(lado_cuadrado)))
+        # Warp the binary image to obtain a straightened digit
+        warped = cv2.warpPerspective(binaria, M, (lado, lado))
 
-        enderezada = cv2.resize(enderezada, (50, 50))
-        return self.suavizar_numero(enderezada)
+        # Normalize size and apply final smoothing
+        warped = cv2.resize(warped, (50, 50))
+        return self.suavizar_numero(warped)
 
+    # ============================================================================================
+    #                                   FINAL SMOOTHING
+    # ============================================================================================
+    def suavizar_numero(self, img):
+        # Find contours and hierarchy to preserve holes
+        contornos, jer = cv2.findContours(img, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+        # Output image initialization
+        out = np.zeros_like(img)
 
-    def suavizar_numero(self, img_thresh):
-        contornos, jerarquia = cv2.findContours(img_thresh, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
-        img_smooth = np.zeros_like(img_thresh)
+        if jer is None:
+            return img
 
-        new_image = img_smooth.copy()
-        contornos_vacios = []
-
-        for i, contorno in enumerate(contornos):
-            epsilon = 0.01 * cv2.arcLength(contorno, True)
-            cont_suave = cv2.approxPolyDP(contorno, epsilon, True)
-
-            if jerarquia[0][i][3] == -1:
-                cv2.drawContours(new_image, [cont_suave], -1, (255), thickness=cv2.FILLED)
+        holes = []
+        for i, c in enumerate(contornos):
+            # Approximate contour for smoother shape
+            eps = 0.01 * cv2.arcLength(c, True)
+            c = cv2.approxPolyDP(c, eps, True)
+            # External contour
+            if jer[0][i][3] == -1:
+                cv2.drawContours(out, [c], -1, 255, cv2.FILLED)
+            # Internal contour (hole)
             else:
-                contornos_vacios.append(cont_suave)
+                holes.append(c)
 
-        for contorno in contornos_vacios:
-            cv2.drawContours(new_image, [contorno], -1, (0), thickness=cv2.FILLED)
+        # Draw holes in black
+        for h in holes:
+            cv2.drawContours(out, [h], -1, 0, cv2.FILLED)
 
-        return new_image
+        # Return the smoothed digit image
+        return out

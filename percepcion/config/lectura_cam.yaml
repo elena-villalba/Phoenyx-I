@@ -1,12 +1,9 @@
 brain_percepcion:
   ros__parameters:
     numero_muestras: 10
+    show_camera: false
     display: true
-    model_path: "/home/pucra/Phoenyx/src/percepcion/percepcion/modelo_knn(1).pkl"
     dump_debug_images: false
     realsense_width: 640
     realsense_height: 480
     realsense_fps: 30
-
-
-    
