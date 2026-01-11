@@ -158,7 +158,7 @@ To ensure safty, the system loads a predifined `map` to keep the robot within fi
 # Launch an empty world on gazebo with the rover model
 ros2 launch osr_gazebo empty_world.launch.py
 
-# Launch an empty world on gazebo with the simplified model of the rover model
+# Launch an empty world on gazebo and rviz with the simplified model of the rover model
 ros2 launch osr_gazebo empty_world_simplified.launch.py
 
 # Launch rviz with the rover model
