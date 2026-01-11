@@ -166,6 +166,9 @@ ros2 launch osr_gazebo rviz_simplified.launch.py
 ros2 launch osr_bringup joystick_launch.py 
 ```
 
+> [!NOTE]
+> For details on the controller layout, how to change the joystick mapping, and a deeper explanation of how the teleoperation pipeline works, see: [Joystick Teleoperation Documentation](docs/joystick_teleoperation.md)
+
 #### Control Task (Without Nav2)
 This mode is used to evaluate the rover’s control and navigation behavior inside a **maze environment**.
 Three maze worlds are provided, each with different layouts and difficulty levels.

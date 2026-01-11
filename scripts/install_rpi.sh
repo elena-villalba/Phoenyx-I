@@ -77,6 +77,7 @@ install_ros_packages() {
   sudo apt install -y ros-humble-velocity-controllers
   sudo apt install -y ros-humble-joint-trajectory-controller
   sudo apt install -y ros-humble-urdf-tutorial
+  sudo apt install -y ros-humble-joy-tester
 
   # Other packages needed
   sudo apt install -y ros-humble-nav2-msgs

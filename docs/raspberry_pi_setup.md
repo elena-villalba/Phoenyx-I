@@ -20,7 +20,7 @@ The target system is optimized for **ROS 2 Humble** running on **Ubuntu Server 2
 
 ---
 
-## 1️. Install the Operating System
+## 1. Install the Operating System
 
 ### 1.1. Raspberry Pi Imager
 
@@ -73,7 +73,7 @@ No screen or peripherals are required.
 
 ---
 
-## 2️. Connect to the Raspberry Pi via SSH
+## 2. Connect to the Raspberry Pi via SSH
 
 Make sure your **host computer** is on the same network.
 
