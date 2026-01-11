@@ -99,8 +99,9 @@ in `joystick.yaml`.
     ```bash
     ros2 run joy joy_tester test_joy
     ```
-    > [!WARNING]
-    > The joy_tester tool launches a graphical interface. If you are running this command on a Raspberry Pi without a desktop environment, the GUI will not be visible. It is recommended to perform joystick identification on a PC with a graphical interface.
+
+> [!WARNING]
+> The joy_tester tool launches a graphical interface. If you are running this command on a Raspberry Pi without a desktop environment, the GUI will not be visible. It is recommended to perform joystick identification on a PC with a graphical interface.
 
 3. Move each axis and press each button while observing which index changes.
 
