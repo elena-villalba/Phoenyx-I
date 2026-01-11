@@ -65,6 +65,14 @@ To run Phoenyx I on the real robot, you first need to set up the onboard Raspber
 👉 **Follow the complete Raspberry Pi setup guide here:**  
 ➡️ [`docs/raspberry_pi_setup.md`](docs/raspberry_pi_setup.md)
 
+### Steering Servo Calibration
+
+Before operating the rover on real hardware, the steering servos **must be calibrated** to ensure all wheels are correctly aligned and the full steering range is used.
+
+This procedure is **only required once**, or whenever a steering servo or corner assembly is replaced.
+
+👉 **Follow the complete steering servo calibration guide here:**  
+➡️ [`docs/steering_servo_calibration.md`](docs/steering_servo_calibration.md)
 
 ## 🎯 Competition Challenge Overview
 The **SENER-CEA's Bot Talent** competition features a serie of challenges focused on **AMRs (Autonomus Mobile Robots)**, in which universities from across Spain compete by completing some tasks using an open source Rover. Our team successfully tackled all the proposed challenges:

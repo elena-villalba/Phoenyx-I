@@ -39,7 +39,7 @@ The following image shows the joystick mapping used to control the robot.
 <p align="center">
   <img src="images/joystick_f710_mapping.png" 
   alt="Logitech F710 joystick mapping" 
-  width="600">
+  width="650">
 </p>
  
 ### Controller Mapping
