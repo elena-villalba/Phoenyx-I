@@ -15,19 +15,19 @@ teleop_twist_joy_node:
         
         # Linear velocity (forward/backward)
         axis_linear:
-            x: 1   # Joystick axis index
+            x: 7   # Joystick axis index
         scale_linear:
-            x: 1.0 # Max linear speed [m/s]
+            x: 0.5 # Max linear speed [m/s]
         scale_linear_turbo:
-            x: 3.0 # Max linear speed in turbo mode [m/s]
+            x: 1.0 # Max linear speed in turbo mode [m/s]
 
         # Angular velocity (yaw rotation)
         axis_angular:
             yaw: 3   # Joystick axis index
         scale_angular:
-            yaw: 1.0 # Max angular speed [rad/s]
+            yaw: 0.5 # Max angular speed [rad/s]
         scale_angular_turbo:
-            yaw: 3.0 # Max angular speed in turbo mode [rad/s]
+            yaw: 1.0 # Max angular speed in turbo mode [rad/s]
         
          # Safety and mode buttons
         require_enable_button: true

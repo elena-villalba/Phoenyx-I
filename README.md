@@ -171,7 +171,7 @@ ros2 launch osr_gazebo rviz_simplified.launch.py
 ### Move With a Controller
 ```bash
 # With an open gazebo world with the rover model you can use a controller to move it
-ros2 launch osr_bringup joystick_launch.py 
+ros2 launch osr_bringup joystick.launch.py mode:=sim
 ```
 
 > [!NOTE]
@@ -219,6 +219,12 @@ ros2 topic pub --once /aruco_scan std_msgs/Bool "{data: true}"
 ```
 
 ### 🤖 On Real Robot 
+
+#### To control with a controller
+```bash
+ros2 launch osr_bringup joystick.launch.py
+```
+
 #### For percepcion task
 ``` bash
 ros2 launch prueba2_percepcion.launch.py 
