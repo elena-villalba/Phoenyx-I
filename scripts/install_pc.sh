@@ -2,23 +2,39 @@
 
 # PUCRA – Phoenyx I (Raspberry Pi) Installation Script
 # ----------------------------------------------------
-# This script bootstraps a Raspberry Pi running Ubuntu Server 22.04 LTS for the Phoenyx I rover:
-#  - Installs ROS 2 Humble
-#  - Installs system + ROS dependencies (via rosdep)
+# This script bootstraps a PC running Ubuntu 22.04 LTS for the Phoenyx I rover development environment:
+#  - Installs Visual Studio Code, terminator and git
+#  - Installs ROS 2 Humble and the required ROS 2 packages
 #  - Creates a ROS 2 workspace
-#  - Clones the Phoenyx repository
+#  - Clones the Phoenyx-I repository
 #  - Builds the workspace with colcon
 #  - Configures the user's ~/.bashrc to source ROS and the workspace
 #
-# Target platform: Ubuntu Server 22.04 (aarch64) on Raspberry Pi 4
+# Target platform: Ubuntu 22.04 LTS (amd64) on a development PC/laptop
 #
 # Usage:
-#   chmod +x install_rpi.sh
-#   ./install_rpi.sh
+#   chmod +x install_pc.sh
+#   ./install_pc.sh
 
 ##########################################################
 #                FUNCTION DEFINITIONS                    #
 ##########################################################
+
+# Install Visual Studio Code 
+install_vscode() {
+  echo "Visual Studio Code is not installed. Proceeding with installation..."
+  sudo apt update 
+  sudo snap install --classic code
+  echo "Visual Studio Code installation completed."
+}
+
+# Install terminator
+install_terminator() {
+  echo "Terminator is not installed. Proceeding with installation..."
+  sudo apt update 
+  sudo apt install -y terminator
+  echo "Terminator installation completed."
+}
 
 # Install git 
 install_git() {
@@ -74,6 +90,7 @@ install_ros_packages() {
   sudo apt install -y ros-humble-trajectory-msgs
   sudo apt install -y ros-humble-velocity-controllers
   sudo apt install -y ros-humble-joint-trajectory-controller
+  sudo apt install -y ros-humble-gazebo-ros2-control-demos
   sudo apt install -y ros-humble-urdf-tutorial
 
   # Other packages needed
@@ -90,63 +107,6 @@ install_colcon_extensions() {
   echo "colcon common extensions installation completed."
 }
 
-# Install rosdep + pip prereqs
-install_python_and_rosdep_tools() {
-  echo "Installing python3-pip and rosdep..."
-  sudo apt update
-  sudo apt install -y python3-pip python3-rosdep
-
-  # rosdep init only once system-wide
-  if [ ! -f /etc/ros/rosdep/sources.list.d/20-default.list ]; then
-    echo "Initializing rosdep..."
-    sudo rosdep init
-  else
-    echo "rosdep already initialized."
-  fi
-
-  echo "Updating rosdep database..."
-  rosdep update
-}
-
-# Install pip deps for hardware libs
-install_hardware_python_deps() {
-  echo "Installing hardware Python dependencies (user-local)..."
-  python3 -m pip install --user --upgrade pip
-
-  # These are typically used for servos, INA260, GPIO, I2C, etc.
-  python3 -m pip install --user \
-    adafruit-circuitpython-servokit \
-    ina260 \
-    RPi.GPIO \
-    smbus  \
-    roboclaw 
-}
-
-install_pycrc_from_github() {
-  echo "Installing PyCRC from GitHub (alexbutirskiy/PyCRC)..."
-
-  local PYCRC_DIR="$HOME/.local/src/PyCRC"
-  local PYCRC_REPO="https://github.com/alexbutirskiy/PyCRC.git"
-
-  sudo apt update
-  sudo apt install -y git python3-pip
-
-  mkdir -p "$HOME/.local/src"
-
-  if [ -d "${PYCRC_DIR}/.git" ]; then
-    echo "PyCRC repo already exists. Updating..."
-    git -C "$PYCRC_DIR" pull --ff-only
-  else
-    git clone "$PYCRC_REPO" "$PYCRC_DIR"
-  fi
-
-  # Install using pip from local path (user-local, safer than sudo pip)
-  python3 -m pip install --user --upgrade pip
-  python3 -m pip install --user "$PYCRC_DIR"
-
-  echo "PyCRC installed successfully."
-}
-
 # Configurate the bash file
 configure_bashrc() {
   echo "Configuring the bash file..."
@@ -160,6 +120,12 @@ configure_bashrc() {
   if ! grep -q "source /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash" ~/.bashrc; then
     echo "Adding colcon argcomplete to .bashrc"
     echo "source /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash" >> ~/.bashrc
+  fi
+
+  # Add gazebo to bashrc
+  if ! grep -q "source /usr/share/gazebo/setup.bash" ~/.bashrc; then
+    echo "Adding gazebo to .bashrc"
+    echo "source /usr/share/gazebo/setup.bash" >> ~/.bashrc
   fi
    
   # Add workspace setup to bashrc
@@ -180,7 +146,6 @@ configure_bashrc() {
     echo "export ROS_DOMAIN_ID=58" >> ~/.bashrc
   fi
   
-    
   # Source the updated .bashrc
   source ~/.bashrc
   
@@ -203,34 +168,18 @@ clone_phoenyxI_repository() {
   echo "Phoenyx-I repository cloned successfully."
 }
 
-install_udev_rules() {
-  echo "Installing udev rules for Phoenyx I..."
+# Remove COLCON_IGNORE file to enable osr_gazebo package on PC
+remove_colcon_ignore_gazebo() {
+  echo "Checking for COLCON_IGNORE in osr_gazebo package..."
 
-  UDEV_SRC="$HOME/phoenyxI_ws/src/phoenyx/config"
-  UDEV_DST="/etc/udev/rules.d"
+  COLCON_IGNORE_PATH="$HOME/phoenyxI_ws/src/osr_gazebo/COLCON_IGNORE.txt"
 
-  if [ ! -d "$UDEV_SRC" ]; then
-    echo "⚠️  udev rules directory not found: $UDEV_SRC"
-    echo "Skipping udev rules installation."
-    return
+  if [ -f "$COLCON_IGNORE_PATH" ]; then
+    echo "Removing COLCON_IGNORE.txt from osr_gazebo (PC build enabled)"
+    rm "$COLCON_IGNORE_PATH"
+  else
+    echo "No COLCON_IGNORE.txt found in osr_gazebo. Nothing to do."
   fi
-
-  sudo cp "$UDEV_SRC"/* "$UDEV_DST"/
-
-  sudo udevadm control --reload-rules
-  sudo udevadm trigger
-
-  echo "udev rules installed successfully."
-}
-
-# rosdep install for workspace
-install_workspace_deps_with_rosdep() {
-  echo "Installing workspace dependencies with rosdep..."
-  # Ensure ROS env is available in this shell
-  source /opt/ros/humble/setup.bash
-
-  cd "${WORKSPACE}"
-  rosdep install --from-paths src --ignore-src -r -y --rosdistro humble
 }
 
 # Build ROS 2 workspace
@@ -250,6 +199,21 @@ build_ros2_workspace() {
 ##########################################################
 
 echo "Installing the necesary resources..."
+
+
+# Check if Visual Studio Code is installed
+if ! snap list | grep -q code; then
+  install_vscode
+else
+  echo "Visual Studio Code is already installed."
+fi
+
+# Check if terminator is installed
+if ! dpkg -l | grep -q terminator; then
+  install_terminator
+else
+  echo "Terminator is already installed."
+fi
 
 # Check if Git is install
 if ! command -v git &> /dev/null; then
@@ -275,15 +239,10 @@ else
    echo "colcon common extensions are already installed."
 fi
 
-install_python_and_rosdep_tools
-
 create_ros2_workspace
 clone_phoenyxI_repository
 
-install_udev_rules
-install_workspace_deps_with_rosdep
-install_hardware_python_deps
-install_pycrc_from_github
+remove_colcon_ignore_gazebo
 
 build_ros2_workspace
 configure_bashrc

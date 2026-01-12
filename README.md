@@ -58,6 +58,29 @@ Phoenyx I demonstrates how high-performance autonomy can be achieved using **acc
 
 ## 🚀 Quick Start 
 
+### PC (Development & Visualization)
+
+The PC is used as a **development and visualization environment**, either to:
+- **run simulations in Gazebo**, or
+- **visualize and monitor the real robot** (e.g. using RViz) while it is running.
+
+To set up the Phoenyx I PC environment on **Ubuntu 22.04 LTS**, use the provided installation script.
+
+1. Download the installation script:
+   ```bash
+   $ wget https://raw.githubusercontent.com/PUCRA/Phoenyx-I/refs/heads/main/scripts/install_pc.sh
+   ```
+
+2. Make the script executable:
+   ```bash
+   $ chmod +x install_pc.sh
+   ```
+
+3. Run the script:
+   ```bash
+   ./install_pc.sh
+   ```
+
 ### Raspberry Pi
 
 To run Phoenyx I on the real robot, you first need to set up the onboard Raspberry Pi.
