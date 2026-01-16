@@ -7,7 +7,7 @@ package_name = 'osr_control_challenge'
 # Find all YAML config files
 config_files = glob.glob(os.path.join('conf', '*.yaml'))
 
-# Find all launch files
+# Find all launch filest
 launch_files = glob.glob(os.path.join('launch', '*.py'))
 
 setup(
