@@ -108,10 +108,10 @@ class Maze_Navigation_Node(Node):
     # =========================
     def scan_callback(self, msg: LaserScan):
         # We rotate the scan -90° to align the front of the robot.
-        # Uncoment this line for real
+        # Uncoment this line for real and comment for simulation
         # scan = rotate_laserscan(msg, math.radians(-90))
 
-        # Uncoment this line for simulation
+        # Uncoment this line for simulation, and comment for real
         scan = msg
 
         # We convert ranges and angles to numpy

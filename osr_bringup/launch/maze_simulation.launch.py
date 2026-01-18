@@ -45,7 +45,10 @@ def generate_launch_description():
     xacro_file = os.path.join(osr_urdf_path, 'urdf', 'osr_simplified.urdf.xacro')
     doc = xacro.parse(open(xacro_file))
     xacro.process_doc(doc)
-    params = {'robot_description': doc.toxml()}
+    params = {
+        'robot_description': doc.toxml()
+        ,'use_sim_time': True
+        }
 
     # Nodes
     node_robot_state_publisher = Node(
@@ -59,7 +62,8 @@ def generate_launch_description():
     controller_spawn = Node(
         package='osr_gazebo',
         executable='osr_controller',
-        output='screen'
+        output='screen',
+        parameters=[{'use_sim_time': True}],
     )
 
     spawn_entity = Node(
