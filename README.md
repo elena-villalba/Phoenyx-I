@@ -47,6 +47,7 @@ Phoenyx I demonstrates how high-performance autonomy can be achieved using **acc
 
 ## 📦 Jump to:
 
+- [🚀 Quick Start ](#-quick-srtart)
 - [🎯 Competition Challenges Overview](#-competition-challenge-overview)
 - [🛠️ Development Environment](#%EF%B8%8F-development-environment)
 - [📂 Repo Structure](#-repository-structure)
@@ -54,6 +55,47 @@ Phoenyx I demonstrates how high-performance autonomy can be achieved using **acc
 - [🏁 Competition Results](#-competition-results)
 - [🤝 Want to Collaborate?](#-want-to-collaborate)
 - [🌐 Join & Follow Us](#-join--follow-us)
+
+## 🚀 Quick Start 
+
+### PC (Development & Visualization)
+
+The PC is used as a **development and visualization environment**, either to:
+- **run simulations in Gazebo**, or
+- **visualize and monitor the real robot** (e.g. using RViz) while it is running.
+
+To set up the Phoenyx I PC environment on **Ubuntu 22.04 LTS**, use the provided installation script.
+
+1. Download the installation script:
+   ```bash
+   $ wget https://raw.githubusercontent.com/PUCRA/Phoenyx-I/refs/heads/main/scripts/install_pc.sh
+   ```
+
+2. Make the script executable:
+   ```bash
+   $ chmod +x install_pc.sh
+   ```
+
+3. Run the script:
+   ```bash
+   ./install_pc.sh
+   ```
+
+### Raspberry Pi
+
+To run Phoenyx I on the real robot, you first need to set up the onboard Raspberry Pi.
+
+👉 **Follow the complete Raspberry Pi setup guide here:**  
+➡️ [`docs/raspberry_pi_setup.md`](docs/raspberry_pi_setup.md)
+
+### Steering Servo Calibration
+
+Before operating the rover on real hardware, the steering servos **must be calibrated** to ensure all wheels are correctly aligned and the full steering range is used.
+
+This procedure is **only required once**, or whenever a steering servo or corner assembly is replaced.
+
+👉 **Follow the complete steering servo calibration guide here:**  
+➡️ [`docs/steering_servo_calibration.md`](docs/steering_servo_calibration.md)
 
 ## 🎯 Competition Challenge Overview
 The **SENER-CEA's Bot Talent** competition features a serie of challenges focused on **AMRs (Autonomus Mobile Robots)**, in which universities from across Spain compete by completing some tasks using an open source Rover. Our team successfully tackled all the proposed challenges:
@@ -139,7 +181,7 @@ To ensure safty, the system loads a predifined `map` to keep the robot within fi
 # Launch an empty world on gazebo with the rover model
 ros2 launch osr_gazebo empty_world.launch.py
 
-# Launch an empty world on gazebo with the simplified model of the rover model
+# Launch an empty world on gazebo and rviz with the simplified model of the rover model
 ros2 launch osr_gazebo empty_world_simplified.launch.py
 
 # Launch rviz with the rover model
@@ -152,8 +194,11 @@ ros2 launch osr_gazebo rviz_simplified.launch.py
 ### Move With a Controller
 ```bash
 # With an open gazebo world with the rover model you can use a controller to move it
-ros2 launch osr_bringup joystick_launch.py 
+ros2 launch osr_bringup joystick.launch.py mode:=sim
 ```
+
+> [!NOTE]
+> For details on the controller layout, how to change the joystick mapping, and a deeper explanation of how the teleoperation pipeline works, see: [Joystick Teleoperation Documentation](docs/joystick_teleoperation.md)
 
 #### Control Task (Without Nav2)
 This mode is used to evaluate the rover’s control and navigation behavior inside a **maze environment**.
@@ -197,6 +242,12 @@ ros2 topic pub --once /aruco_scan std_msgs/Bool "{data: true}"
 ```
 
 ### 🤖 On Real Robot 
+
+#### To control with a controller
+```bash
+ros2 launch osr_bringup joystick.launch.py
+```
+
 #### For percepcion task
 ``` bash
 ros2 launch prueba2_percepcion.launch.py 
