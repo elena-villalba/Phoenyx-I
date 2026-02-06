@@ -9,7 +9,7 @@ def main():
     print("[INA260] Inicializando bus I2C...")
     try:
         i2c = busio.I2C(board.SCL, board.SDA)
-        ina = INA260(i2c)
+        ina = INA260(i2c, address=0x45)
     except Exception as e:
         print("[ERROR] No se pudo inicializar INA260")
         print(e)
@@ -27,7 +27,7 @@ def main():
             current = ina.current        # mA
             power = ina.power            # mW
 
-            # Filtro básico de sanity-check
+            # Filtro bÃ¡sico de sanity-check
             if voltage < 0 or voltage > 60:
                 print("[WARN] Voltaje fuera de rango:", voltage)
 

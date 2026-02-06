@@ -1,7 +1,7 @@
 from setuptools import find_packages, setup
 import os
 from glob import glob
-package_name = 'percepcion'
+package_name = 'osr_perception_challenge'
 
 setup(
     name=package_name,
@@ -13,6 +13,7 @@ setup(
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'launch'), glob(os.path.join('launch', '*launch.[pxy][yma]*'))),
         (os.path.join('share', package_name, 'config'), glob(os.path.join('config', '*.[yma]*'))),
+        (os.path.join('share', package_name, 'models'), glob('models/*.pkl')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -30,10 +31,8 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'dar_vueltas = percepcion.dar_vueltas:main',
-            'lectura_camara = percepcion.Lectura_camara:main',
-            'brain_percepcion = percepcion.brain:main',
-            'recorte = percepcion.recorte_view:main',
+            'dar_vueltas = osr_perception_challenge.dar_vueltas:main',
+            'brain_percepcion = osr_perception_challenge.brain:main',
         ],
     },
 )

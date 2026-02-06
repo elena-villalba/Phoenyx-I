@@ -45,9 +45,9 @@ This step is critical to enable **headless operation** (no screen, keyboard, or 
 1. In **Raspberry Pi Imager**, press **`Ctrl + Shift + X`** to open **Advanced Options**.
 2. Configure the following settings:
    - ✅ **Set hostname**  
-     Hostname: `phoenyxI`
+     Hostname: `phoenyxi`
    - ✅ **Set username and password**  
-     Username: `phoenyxI`  
+     Username: `phoenyxi`  
      Password: *(choose a secure password)*
    - ✅ **Configure wireless LAN** 
      - SSID: *your WiFi network name*  
@@ -78,7 +78,7 @@ No screen or peripherals are required.
 Make sure your **host computer** is on the same network.
 
 ```bash
-$ ssh phoenyxI@phoenyxI.local
+$ ssh phoenyxi@phoenyxi.local
 ```
 
 ## 3. Remote Development with Visual Studio Code
@@ -104,7 +104,7 @@ To avoid working directly in a terminal, we strongly recommend using **Visual St
 4. Enter the SSH target:
 
    ```text
-   phoenyxI@phoenyxI.local
+   phoenyxi@phoenyxi.local
     ```
 5. Select the default SSH config file when prompted.
 
@@ -112,7 +112,7 @@ To avoid working directly in a terminal, we strongly recommend using **Visual St
 
 ### 3.3. Connect to the Raspberry Pi
 
-1. In the Remote Explorer panel, click phoenyxI@phoenyxI.local.
+1. In the Remote Explorer panel, click `phoenyxi@phoenyxi.local`.
 2. When asked, enter the password, the same you put during the SO instalation
 3. After a short setup process, VS Code will open a remote session directly on the Raspberry Pi.
 
@@ -124,15 +124,22 @@ At this point, the Raspberry Pi is fully configured and accessible via SSH and V
 
 The complete software stack (ROS 2, system dependencies, drivers, and workspace setup) is installed by running a single script. 
 
-1. Download the installation script
+1. Update the system package list
+   ```bash
+   sudo apt update -y
+   ```
+
+2. Download the installation script
    ```bash
    $ wget https://raw.githubusercontent.com/PUCRA/Phoenyx-I/refs/heads/main/scripts/install_rpi.sh
    ```
-2. Make the installation script executable:
+
+3. Make the installation script executable:
    ```bash
    $ chmod +x install_rpi.sh
    ```
-3. Run the script
+
+4. Run the script
    ```bash
    $ ./scripts/install_rpi.sh
    ```
@@ -197,7 +204,7 @@ These interfaces must be enabled and properly configured on the Raspberry Pi.
 2. Reboot for group changes to take effect.
 
    ```bash
-   $ sudo reboot
+   $ sudo reboot now
    ```
 
 3. Verify serial devices
@@ -213,4 +220,76 @@ These interfaces must be enabled and properly configured on the Raspberry Pi.
    The exact mapping may vary depending on the Raspberry Pi model and configuration.
 
 ---
-➡️ After the script finishes, follow the instructions in the main README.md to run the system in simulation or on the real robot.
+## 6. ✅ System Verification
+
+After completing the installation, it is recommended to verify that **ROS 2**, the **hardware interfaces**, and the main sensors are working correctly.
+
+This section provides a minimal validation procedure to confirm that the system is correctly configured.
+
+---
+
+### 6.1. Verify ROS 2 Installation
+
+Open a new terminal (or reconnect via SSH) and check that ROS 2 commands are available:
+
+```bash
+$ ros2 --help
+```
+
+If ROS 2 is correctly installed, a list of available commands will be displayed.
+
+---
+
+### 6.2. Verify INA260 Power Sensor
+
+Run the INA260 test script included in the repository:
+
+```bash
+$ cd ~/phoenyxI_ws/src/scripts
+$ python3 test_ina260.py
+```
+
+If the sensor is correctly detected, the terminal should display values similar to:
+```bash
+V=12.10 V | I=450.32 mA | P=5450.00 mW
+```
+
+If an error appears:
+- Check that I2C is enabled (sudo raspi-config)
+- Verify the sensor connection
+- Run:
+   ```bash
+   sudo i2cdetect -y 1
+   ```
+   The INA260 should normally appear at address 0x45.
+
+---
+
+### 6.3. Verify IMU (MPU6050)
+
+Run the IMU test script:
+```bash
+$ cd ~/phoenyxI_ws/src/scripts
+$ python3 test_imu.py
+```
+
+Expected output:
+```bash
+RPY: +0.12  -1.05  +32.40
+```
+The values should change smoothly when the robot is moved.
+
+If an error appears:
+- Check that I2C is enabled (sudo raspi-config)
+- Verify the sensor connection
+- Run:
+   ```bash
+   sudo i2cdetect -y 1
+   ```
+   The MPU6050 usually appears at address 0x68.
+
+---
+
+➡️ Continue with the main project documentation to run Phoenyx I in simulation or on the real robot:
+
+👉 [Phoenyx I Main README](../README.md)

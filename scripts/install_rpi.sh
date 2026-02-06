@@ -61,11 +61,6 @@ install_ros_packages() {
   echo "Installing the required ROS 2 packages..."
   sudo apt update
 
-  sudo apt install -y ros-humble-xacro
-  sudo apt install -y ros-humble-gazebo-ros
-  sudo apt install -y ros-humble-gazebo-ros-pkgs
-  sudo apt install -y ros-humble-rviz2
-
   # Needed for JPL ROS packages
   sudo apt install -y ros-humble-controller-manager
   sudo apt install -y ros-humble-robot-state-publisher
@@ -74,11 +69,11 @@ install_ros_packages() {
   sudo apt install -y ros-humble-trajectory-msgs
   sudo apt install -y ros-humble-velocity-controllers
   sudo apt install -y ros-humble-joint-trajectory-controller
-  sudo apt install -y ros-humble-urdf-tutorial
 
   # Other packages needed
   sudo apt install -y ros-humble-nav2-msgs
   sudo apt install -y ros-humble-joy-tester
+  sudo apt install -y ros-humble-xacro
 
   echo "ROS 2 packages intallation completed."
 }
@@ -113,9 +108,12 @@ install_hardware_python_deps() {
   echo "Installing hardware Python dependencies (user-local)..."
   python3 -m pip install --user --upgrade pip
 
-  # These are typically used for servos, INA260, GPIO, I2C, etc.
+  # These are used for IMU, servos, INA260, GPIO, and Roboclaw motor controller
   python3 -m pip install --user \
+    adafruit-circuitpython-blinka \
+    adafruit-circuitpython-mpu6050 \
     adafruit-circuitpython-servokit \
+    adafruit-circuitpython-ina260 \
     ina260 \
     RPi.GPIO \
     smbus  \
@@ -145,6 +143,20 @@ install_pycrc_from_github() {
   python3 -m pip install --user "$PYCRC_DIR"
 
   echo "PyCRC installed successfully."
+}
+
+install_realsense_deps() {
+  echo "Installing Intel RealSense Python dependencies (user-local)..."
+
+  python3 pip install pyrealsense2 # RealSense Python bindings 
+  python3 -m pip install joblib # ML deps you listed
+  python3 -m pip install scikit-learn
+  python3 -m pip install --upgrade opencv-python
+  python3 -m pip install --upgrade scipy scikit-learn joblib
+  python3 -m pip install --user --force-reinstall "scikit-learn==1.6.1" joblib
+  python3 -m pip install --user --force-reinstall "numpy<2"
+  
+  echo "RealSense dependencies installed."
 }
 
 # Configurate the bash file
@@ -206,7 +218,7 @@ clone_phoenyxI_repository() {
 install_udev_rules() {
   echo "Installing udev rules for Phoenyx I..."
 
-  UDEV_SRC="$HOME/phoenyxI_ws/src/phoenyx/config"
+  UDEV_SRC="$HOME/phoenyxI_ws/src/config"
   UDEV_DST="/etc/udev/rules.d"
 
   if [ ! -d "$UDEV_SRC" ]; then
@@ -284,6 +296,7 @@ install_udev_rules
 install_workspace_deps_with_rosdep
 install_hardware_python_deps
 install_pycrc_from_github
+install_realsense_deps
 
 build_ros2_workspace
 configure_bashrc

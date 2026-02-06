@@ -47,7 +47,7 @@ def generate_launch_description():
             output='screen',
             emulate_tty=True,
             respawn=True,
-            parameters=[{'centered_pulse_widths': [160, 148, 153, 143]}]  # pulse width where the corner motors are in their default position, see rover_bringup.md.
+            parameters=[{'centered_pulse_widths': [164, 148, 153, 143]}]  # pulse width where the corner motors are in their default position, see rover_bringup.md.
         )
     )
 
@@ -63,15 +63,7 @@ def generate_launch_description():
                         {'enable_odometry': LaunchConfiguration('enable_odometry')}]
         )
     )
-
-    ld.add_action(
-        Node(
-            package='phoenyx_nodes',
-            executable='leds',
-            name='leds'
-        )
-    )
-
+    
     ld.add_action(
         Node(
             package='osr_control',

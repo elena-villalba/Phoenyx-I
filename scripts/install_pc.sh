@@ -107,6 +107,20 @@ install_colcon_extensions() {
   echo "colcon common extensions installation completed."
 }
 
+install_realsense_deps() {
+  echo "Installing Intel RealSense Python dependencies (user-local)..."
+
+  python3 pip install pyrealsense2 # RealSense Python bindings 
+  python3 -m pip install joblib # ML deps you listed
+  python3 -m pip install scikit-learn
+  python3 -m pip install --upgrade opencv-python
+  python3 -m pip install --upgrade scipy scikit-learn joblib
+  python3 -m pip install --user --force-reinstall "scikit-learn==1.6.1" joblib
+  python3 -m pip install --user --force-reinstall "numpy<2"
+  
+  echo "RealSense dependencies installed."
+}
+
 # Configurate the bash file
 configure_bashrc() {
   echo "Configuring the bash file..."
@@ -243,6 +257,8 @@ create_ros2_workspace
 clone_phoenyxI_repository
 
 remove_colcon_ignore_gazebo
+
+install_realsense_deps
 
 build_ros2_workspace
 configure_bashrc
