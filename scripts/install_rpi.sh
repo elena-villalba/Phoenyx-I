@@ -74,6 +74,7 @@ install_ros_packages() {
   sudo apt install -y ros-humble-nav2-msgs
   sudo apt install -y ros-humble-joy-tester
   sudo apt install -y ros-humble-xacro
+  sudo apt install -y ros-humble-rplidar-ros
 
   echo "ROS 2 packages intallation completed."
 }

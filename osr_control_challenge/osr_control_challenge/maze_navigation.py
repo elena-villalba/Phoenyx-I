@@ -1,186 +1,265 @@
+# =========================
+# IMPORTS
+# =========================
+
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Twist
-from sensor_msgs.msg import LaserScan
+from geometry_msgs.msg import Twist          # Message for linear 
+from sensor_msgs.msg import LaserScan        # LIDAR message
 import numpy as np
 import math
 
+# =========================
+# FUNCTION TO ROTATE THE LASERSCAN
+# =========================
+# The LIDAR is physically mounted rotated (in our case 90°).
+# This function repositions its measurements
+# so that the 0° angle matches with the actual front of the robot.
+def rotate_laserscan(scan_msg: LaserScan, angle_shift_rad: float) -> LaserScan:
 
+    # scan_msg.ranges is a list:
+    # each position corresponds to a specific angular direction
+    ranges = np.array(scan_msg.ranges)
+
+    # Angle between two consecutive LIDAR measurements (rad)
+    angle_increment = scan_msg.angle_increment
+
+    # We convert the rotation angle (in our case 90°)
+    # into an index shift of the array
+    #
+    # Example:
+    # - if each measurement is 1°
+    # - and we rotate -90°
+    # → we shift the array 90 positions
+    shift = int(angle_shift_rad / angle_increment)
+
+    # We move the distance array in a circular motion.
+    # This causes:
+    # - what was previously on one side
+    # - to now be in front (angle 0°)
+    rotated_ranges = np.roll(ranges, shift)
+
+    # We create a new LaserScan message
+    # with the distances already corrected
+    corrected_scan = LaserScan()
+
+    # We copy the original header
+    corrected_scan.header = scan_msg.header
+
+    # We indicate that the data is now aligned
+    # with the robot's base_link frame.
+    corrected_scan.header.frame_id = 'laser_frame'
+
+    # The rest of the parameters remain unchanged.
+    corrected_scan.angle_min = scan_msg.angle_min
+    corrected_scan.angle_max = scan_msg.angle_max
+    corrected_scan.angle_increment = scan_msg.angle_increment
+    corrected_scan.time_increment = scan_msg.time_increment
+    corrected_scan.scan_time = scan_msg.scan_time
+    corrected_scan.range_min = scan_msg.range_min
+    corrected_scan.range_max = scan_msg.range_max
+
+    # We assign the already rotated distances
+    corrected_scan.ranges = rotated_ranges.tolist()
+
+    # The intensities do not need to be rotated.
+    corrected_scan.intensities = scan_msg.intensities
+
+    # We return the corrected scan
+    return corrected_scan
+
+# =========================
+# MAIN MAZE NAVIGATION NODE
+# =========================
 class Maze_Navigation_Node(Node):
     def __init__(self):
-        super().__init__("maze_navigation_node")
-        self.get_logger().info("🚀 Nodo de movimiento iniciado")
+        # Initializing the ROS 2 node
+        super().__init__("maze_navigation")
+        self.get_logger().info("🚀 Movement node initiated")
 
-        # Publisher a cmd_vel
-        self.cmd_vel_publisher = self.create_publisher(
-            Twist, '/cmd_vel', 10
-        )
+        # Robot speed Publisher
+        self.cmd_vel_publisher = self.create_publisher(Twist, '/cmd_vel', 10)
 
-        # Subscriber a scan --> Lidar
+        # LIDAR Subscriber
         self.pose_subscriber = self.create_subscription(
             LaserScan, '/scan', self.scan_callback, 10
         )
 
-    def scan_callback(self, msg):
-        
-        # msg para cmd_vel
+        # =========================
+        # ANGULAR PID CONTROL (FOLLOW CORRIDOR)
+        # =========================
+        # Error = left distance - right distance
+        # error > 0 → robot closer to the right → turn left
+        # error < 0 → robot closer to the left → turn right
+        self.kp_ang = 1.0
+        self.ki_ang = 0.0
+        self.kd_ang = 0.0
+
+        # Internal variables of the PID
+        self.angular_integral = 0.0
+        self.angular_prev_error = 0.0
+        self.last_time = self.get_clock().now()
+
+        # Angular velocity limit
+        self.max_angular_speed = 0.6
+
+    # =========================
+    # LASER CALLBACK
+    # =========================
+    def scan_callback(self, msg: LaserScan):
+        # We rotate the scan -90° to align the front of the robot.
+        # Uncoment this line for real and comment for simulation
+        # scan = rotate_laserscan(msg, math.radians(-90))
+
+        # Uncoment this line for simulation, and comment for real
+        scan = msg
+
+        # We convert ranges and angles to numpy
+        ranges = np.array(scan.ranges)
+        angles = np.linspace(scan.angle_min, scan.angle_max, len(ranges))
+
+        # Speed message
         cmd = Twist()
 
-        # msg del lidar
-        self.lidar_msg = msg
+        # =========================
+        # TIME CALCULATION FOR THE PID
+        # =========================
+        now = self.get_clock().now()
+        dt = (now - self.last_time).nanoseconds / 1e9
 
-        # Lectura de datos del LIDAR
-        ranges = np.array(msg.ranges)
-        angles = np.linspace(msg.angle_min, msg.angle_max, len(ranges))
+        # Avoid unusual dt values
+        if dt <= 0.0 or dt > 1.0:
+            dt = 0.1
+        self.last_time = now
 
-        # Rango frontal -80° a 80°
-        mask = (np.isfinite(ranges)) & (np.radians(-80) <= angles) & (angles <= np.radians(80))
-        valid_ranges = ranges[mask]
-        valid_angles = angles[mask]
 
-        # Revisión por si no hay datos validos
-        if len(valid_ranges) == 0:
-            self.get_logger().warn("🚧 No hay datos válidos en -80° a 80°.")
+        # =========================
+        # FILTERING INVALID DATA  (infinite values / NaN)
+        # =========================
+        mask_valid = np.isfinite(ranges)
+        ranges = ranges[mask_valid]
+        angles = angles[mask_valid]
+
+        if len(ranges) == 0:
+            self.get_logger().warn("🚧 There is no valid data.")
             return
 
-        # Suavizado de ruido
-        smooth_ranges = np.convolve(valid_ranges, np.ones(3)/3, mode='same')
+        # =========================
+        # SMOOTHING OF MEASUREMENTS
+        # =========================
+        smooth_ranges = np.convolve(ranges, np.ones(3) / 3, mode='same')
+
         new_ranges = []
         new_angles = []
 
-        # Filtramos puntos muy cercanos (< 1.0 m)
+        # We filter only useful distances
         for i in range(len(smooth_ranges)):
-            if smooth_ranges[i] > 1.0:
+            if 0.05 < smooth_ranges[i] < 2.6:  # usable range
                 new_ranges.append(smooth_ranges[i])
-                new_angles.append(valid_angles[i])
+                new_angles.append(angles[i])
 
-        # Revisión por si no hay datos validos
         if len(new_ranges) == 0:
-            self.get_logger().warn("🚧 No hay puntos válidos después del filtrado.")
+            self.get_logger().warn("🚧 No valid points after filtering.")
             return
 
-        # Promediamos en bloques
-        valid_ranges_2, valid_angles_2 = self.average_lidar_in_blocks(new_ranges, new_angles, block_size=10)
+        new_ranges = np.array(new_ranges)
+        new_angles = np.array(new_angles)
 
-        # Pasamos a coordenadas cartesianas
-        x_points = valid_ranges_2 * np.cos(valid_angles_2)
-        y_points = valid_ranges_2 * np.sin(valid_angles_2)
+        # =========================
+        # FRONTAL DISTANCE
+        # =========================
+        # Used to determine linear velocity
+        mask_front = (new_angles >= np.radians(-5)) & (new_angles <= np.radians(5))
+        front_candidates = new_ranges[mask_front]
+        front_distance = np.nanmin(front_candidates) if front_candidates.size > 0 else 10.0
 
-        # Calculamos el centroide como "goal"
-        goal_x = np.mean(x_points)
-        goal_y = np.mean(y_points)
+        # =========================
+        # LATERAL DISTANCES
+        # =========================
+        # Right: 10° to 70°
+        # Left: -10° to -70°
+        mask_left = (new_angles >= np.radians(10)) & (new_angles <= np.radians(70))
+        mask_right = (new_angles <= np.radians(-10)) & (new_angles >= np.radians(-70))
 
-        # Distancia frontal (-5° a 5°)
-        mask = (np.isfinite(ranges)) & (np.radians(-5) <= angles) & (angles <= np.radians(5))
-        front_distance = ranges[mask]
-        front_distance = min(front_distance) if len(front_distance) > 0 else 10.0
+        right_vals = new_ranges[mask_right]
+        left_vals = new_ranges[mask_left]
 
-        # Estrategia de evasión de obstáculos -----------------------------
-        
-        # Si la distancia frontal es menor de 1.2 metros, asumimos que hay una pared delante.
-        if front_distance < 1.2:
+        # Default distance if no wall is detected
+        nominal_dist = 1.0
 
-            # Mostramos un mensaje de advertencia en el registro, indicando la distancia detectada a la pared.
-            self.get_logger().warning(f"⚠️ Pared detectada a {front_distance:.2f} m")
+        right_distance = np.mean(right_vals) if right_vals.size > 0 else nominal_dist
+        left_distance = np.mean(left_vals) if left_vals.size > 0 else nominal_dist
 
-            # Creamos una máscara (filtro booleano) para los rangos del lado izquierdo:
-            # seleccionamos los valores finitos cuyos ángulos estén entre 10° y 80°.
-            mask_left = (np.isfinite(ranges)) & (np.radians(10) <= angles) & (angles <= np.radians(80))
+        # Limit extreme values
+        right_distance = float(np.clip(right_distance, 0.1, 2.5))
+        left_distance = float(np.clip(left_distance, 0.1, 2.5))
 
-            # Creamos otra máscara para el lado derecho:
-            # seleccionamos los valores finitos cuyos ángulos estén entre -80° y -10°.
-            mask_right = (np.isfinite(ranges)) & (np.radians(-80) <= angles) & (angles <= np.radians(-10))
+        # =========================
+        # ERROR IN FOLLOWING THE CENTER OF THE CORRIDOR
+        # =========================
+        # Compute the lateral error as the difference between left and right distances.
+        # Positive error means the robot is closer to the right wall, negative means closer to the left.
+        error = left_distance - right_distance
 
-            # Calculamos la distancia media hacia la izquierda.
-            # Si hay datos válidos en mask_left, tomamos la media; si no, asumimos 0.0.
-            left_distance = np.mean(ranges[mask_left]) if np.any(mask_left) else 0.0
+        # =========================
+        # ANGULAR PID CONTROL
+        # =========================
+        # Integrate error over time for the integral term
+        self.angular_integral += error * dt
 
-            # Calculamos la distancia media hacia la derecha, con la misma lógica que para la izquierda.
-            right_distance = np.mean(ranges[mask_right]) if np.any(mask_right) else 0.0
+        # Anti-windup: limit the integral term to prevent excessive overshoot
+        integral_limit = 2.0
+        self.angular_integral = max(-integral_limit,
+                                    min(integral_limit, self.angular_integral))
 
-            # Si la distancia izquierda es mayor que la derecha, significa que hay más espacio a la izquierda,
-            # por lo que el robot girará hacia ese lado (izquierda, 60°).
-            if left_distance > right_distance:
-                goal_x = front_distance * np.cos(np.radians(60))
-                goal_y = front_distance * np.sin(np.radians(60))
+        # Compute derivative term as the rate of change of error
+        derivative = (error - self.angular_prev_error) / dt
+        self.angular_prev_error = error
 
-            # En caso contrario, hay más espacio a la derecha y el robot girará hacia ese lado (-60°).
-            else:
-                goal_x = front_distance * np.cos(np.radians(-60))
-                goal_y = front_distance * np.sin(np.radians(-60))
-        
-        # ---------------------------------------------------------------
-
-
-
-        # Calculamos el ángulo hacia el "goal"
-        best_angle = math.atan2(goal_y, goal_x)
-
-        # Limitar ángulo máximo a ±120°
-        if abs(best_angle) > math.radians(120):
-            self.get_logger().warn(f"⚠️ Ángulo excesivo ({math.degrees(best_angle):.1f}°). Ajustando...")
-            best_angle = np.sign(best_angle) * math.radians(120)
-
-        # Control proporcional para el giro
-        k_ang = 1.0  # Ganancia angular
-        cmd.angular.z = k_ang * best_angle # Vemos la velocidad angular z del robot para el mensaje
-
-        # Ajustar velocidad lineal según proximidad
-        if front_distance < 0.7:      # Muy cerca → detenerse
-            cmd.linear.x = 0.0
-        elif front_distance < 1.2:    # Preparar giro
-            cmd.linear.x = 0.5
-        else:                         # Camino libre
-            cmd.linear.x = 1.0
-
-        # Publicamos comando
-        self.cmd_vel_publisher.publish(cmd)
-
-        self.get_logger().info(
-            f"🎯 Goal=({goal_x:.2f},{goal_y:.2f}) "
-            f"yaw={math.degrees(best_angle):.1f}° "
-            f"vel=({cmd.linear.x:.2f},{cmd.angular.z:.2f})"
+        # PID control output: proportional + integral + derivative
+        u = (
+            self.kp_ang * error
+            + self.ki_ang * self.angular_integral
+            + self.kd_ang * derivative
         )
 
+        # Limit angular velocity to the robot's maximum capabilities
+        cmd.angular.z = float(np.clip(u, -self.max_angular_speed,
+                                      self.max_angular_speed))
 
-    def average_lidar_in_blocks(self, ranges, angles, block_size=10):
-    
-        # Agrupa los datos del LIDAR en bloques de tamaño fijo y calcula
-        # el promedio de distancia y ángulo dentro de cada bloque.
+        # =========================
+        # LINEAR SPEED ACCORDING TO FRONTAL OBSTACLE
+        # =========================
+        # Adjust forward speed based on distance to obstacle in front
+        # Stops if very close, slows down if approaching, moves normally otherwise
+        if front_distance < 0.3:
+            cmd.linear.x = 0.0
+        elif front_distance < 0.8:
+            cmd.linear.x = 0.10
+        elif front_distance < 1.5:
+            cmd.linear.x = 0.18
+        else:
+            cmd.linear.x = 0.25
 
-        # Esto sirve para reducir el número de puntos y suavizar el ruido
-        # de las mediciones del sensor.
-        
+        # Invert speed because the wheel motors respond inversely
+        cmd.linear.x *= 1
 
-        # Convertimos las listas (si vienen como tal) a arrays de NumPy,
-        # lo que permite hacer operaciones vectorizadas (más rápidas y limpias).
-        ranges = np.array(ranges)
-        angles = np.array(angles)
+        # We publish the speed command
+        self.cmd_vel_publisher.publish(cmd)
 
-        # Calculamos cuántos elementos se pueden agrupar completamente
-        # en bloques del tamaño especificado. 
-        # Ejemplo: si hay 103 puntos y block_size=10, se usarán 100 puntos.
-        n = len(ranges) - (len(ranges) % block_size)
+        # =========================
+        # DEPURATION LOG
+        # =========================
+        self.get_logger().info(
+            f"🎯 front={front_distance:.2f}m "
+            f"L={left_distance:.2f}m R={right_distance:.2f}m "
+            f"err={error:.2f} "
+            f"vel=({cmd.linear.x:.2f}, {cmd.angular.z:.2f})"
+        )
 
-        # Descartamos los puntos sobrantes que no encajan en un bloque completo.
-        ranges = ranges[:n]
-        angles = angles[:n]
-
-        # Reorganizamos los arrays en forma de matriz:
-        # cada fila representa un bloque de "block_size" mediciones consecutivas.
-        range_blocks = ranges.reshape(-1, block_size)
-        angle_blocks = angles.reshape(-1, block_size)
-
-        # Calculamos el promedio de cada bloque (por filas),
-        # obteniendo un valor representativo de distancia y ángulo por bloque.
-        avg_ranges = np.mean(range_blocks, axis=1)
-        avg_angles = np.mean(angle_blocks, axis=1)
-
-        # Devolvemos los promedios como dos arrays (distancias y ángulos promediados).
-        return avg_ranges, avg_angles
-
-
-
+# =========================
+# MAIN FUNCTION
+# =========================
 def main(args=None):
     rclpy.init(args=args)
     node = Maze_Navigation_Node()
