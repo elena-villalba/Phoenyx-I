@@ -5,51 +5,54 @@
 
 > ### **🚀 From Mars to the Lab:**
 >
-> 🤖 **Meet Phoenyx I**, an autonomous exploration rover inspired by **NASA’s designs** — bringing **cutting-edge robotics** from the lab to Mars-like terrains.
+> 🤖 **Meet PHOENYX-I**, an autonomous exploration rover inspired by **NASA’s designs**, bringing **cutting-edge robotics** from the lab to Mars-like terrains.
 >
-> 🧠 Powered by **AI**, **computer vision**, **SLAM**, and **ROS 2**, Phoenyx I is engineered to handle both **Mars-analogue exploration** and **complex real-world robotics challenges**.
+> 🧠 Built on **ROS 2**, Phoenyx I combines **real-time perception**, **LiDAR-based navigation**, and **visual localization**, enabling fully autonomous operation in both simulation and real-world environments.
 > 
-> 🏆 **Winner of Best Overall Rover & Design Excellence** at **Sener-CEA's Bot Talent competition**, it’s not just a prototype, it’s a **proven platform** for **autonomous field robotics**.
+> 🏆 **Winner of Best Overall Rover & Design Excellence** at **Sener-CEA's Bot Talent competition**.
 
 ---
 
- ## 👀 Watch it in action 
-<table>
-  <tr>
-    <td>
-      <img src="resources/Phoenyx-I.jpg" alt="Project Logo" width="800" />
-    </td>
-    <td>
-      <ul>
-        <li><a href="https://youtube.com/shorts/iHNUQLfxfGA?feature=share">📹 Perception Task</a></li>
-        <li><a href="https://youtu.be/W66J1JEbJms">📹 Control Task</a></li>
-        <li><a href="https://youtu.be/kr9DZYW80oY">📹 Guided Task</a></li>
-        <li><a href="https://www.instagram.com/pucra.upc/">📷 Behind the Scenes</a></li>
-        <li><a href="https://www.lavanguardia.com/launi/20250515/10686074/doble-victoria-equipo-upc-competicion-diseno-programacion-robots-superar-misiones-nasa.html">📈 Article in Spanish</a></li>
-        <li><a href="https://www.group.sener/noticias/la-universidad-politecnica-de-catalunya-gana-la-final-de-sener-ceas-bot-talent-el-concurso-de-robotica-de-la-fundacion-sener-y-el-comite-espanol-de-automatica/">📈 Article in Sener's web</a></li>
-      </ul>
-    </td>
-  </tr>
-</table>
+ ## 👀 Watch PHOENYX-I in action 
+ 
+<p align="center">
 
-## 📂 What's Inside This Repository?
+[![Phoenyx I – Autonomous Rover Demo](https://img.youtube.com/vi/FE0RjScWbhM/maxresdefault.jpg)](https://www.youtube.com/watch?v=FE0RjScWbhM)
 
-This repository includes the full **source code**, **ROS 2 packages**, and **system configurations** for **Phoenyx I**, the award-winning autonomous rover engineered by undergraduate students from **PUCRA**, the robotics association at the **Polytechnic University of Catalonia**. 
+</p>
 
-Base on [NASA JPL Open Source Rover](https://github.com/nasa-jpl/open-source-rover),this project enhances the base platform with a robust autonomy stack:
-- 🔍 **Real-time perception** (color, digit recognition & ArUco makers) 
-- 🗺️ **SLAM & LiDAR-based navigation**.
-- 🧭 **Global and local path planning** with obstacle avoidance.
-- 🧠 **Finite State Machine** (FSM) architecture in ROS 2.
-- ⚙️ **Optimized performance on Raspberry Pi 4B.**
 
-Phoenyx I demonstrates how high-performance autonomy can be achieved using **accessible hardware, efficient algorithms, and a ROS 2 architecture**, serving as a scalable platform for education, research, and field robotics experimentation.
+| 🔍 Perception Task | 🛣️ Control Task | 📍 Guidance Task |
+|---|---|---|
+| [![Perception](https://img.youtube.com/vi/iHNUQLfxfGA/maxresdefault.jpg)](https://youtube.com/shorts/iHNUQLfxfGA) | [![Control](https://img.youtube.com/vi/iHNUQLfxfGA/maxresdefault.jpg)](https://youtube.com/shorts/iHNUQLfxfGA)  | [![Guidance](https://img.youtube.com/vi/iHNUQLfxfGA/maxresdefault.jpg)](https://youtube.com/shorts/iHNUQLfxfGA)|
+| <p align="center">Real-time digit and color recognition.</p> | <p align="center">Autonomous corridor navigation using only 2D LiDAR.</p> | <p align="center">Localization and waypoint navigation using ArUco markers.</p> |
+
+
+## 🧭 Project Overview
+
+**PHOENYX-I** is an award-winning autonomous rover developed by undergraduate students from **PUCRA**, the robotics association at the **Polytechnic University of Catalonia**.
+
+This repository contains the complete **ROS 2 autonomy stack** used on the robot, including simulation environments, perception pipelines, control nodes and navigation modules deployed both in competition and real-world operation.
+
+Built on top of the [NASA JPL Open Source Rover](https://github.com/nasa-jpl/open-source-rover), **PHOENYX-I** extends the base platform with a modular autonomy architecture optimized for embedded computing on a **Raspberry Pi 4B (4 GB RAM)**.
+
+The system integrates multiple sensors to enable autonomous operation:
+
+- 🎥 **Intel RealSense D435i** — RGB-D perception and visual detection  
+- 📡 **RPLidar** — 2D LiDAR for navigation and obstacle detection  
+- 🧭 **MPU6050 IMU** — orientation estimation and motion stabilization  
+- 🔋 **INA260** — power monitoring and battery supervision  
+
+<p align="center">
+  <img src="https://img.shields.io/badge/ROS2-Humble-blue"/>
+  <img src="https://img.shields.io/badge/Ubuntu-22.04-orange"/>
+  <img src="https://img.shields.io/badge/Hardware-RaspberryPi4B-red"/>
+  <img src="https://img.shields.io/badge/License-MIT-green"/>
+</p>
 
 ## 📦 Jump to:
 
-- [🚀 Quick Start ](#-quick-srtart)
-- [🎯 Competition Challenges Overview](#-competition-challenge-overview)
-- [🛠️ Development Environment](#%EF%B8%8F-development-environment)
+- [🚀 Quick Start ](#-quick-start)
 - [📂 Repo Structure](#-repository-structure)
 - [🚦 How to Run](#-how-to-run-the-system) 
 - [🏁 Competition Results](#-competition-results)
@@ -96,81 +99,7 @@ This procedure is **only required once**, or whenever a steering servo or corner
 
 👉 **Follow the complete steering servo calibration guide here:**  
 ➡️ [`docs/steering_servo_calibration.md`](docs/steering_servo_calibration.md)
-
-## 🎯 Competition Challenge Overview
-The **SENER-CEA's Bot Talent** competition features a serie of challenges focused on **AMRs (Autonomus Mobile Robots)**, in which universities from across Spain compete by completing some tasks using an open source Rover. Our team successfully tackled all the proposed challenges:
-- **[🔍 Perception Task](#-perception-task)**: Visual marker classification.
-- **[🛣️ Control Task](#-control-task)**: Corridor navigation via LiDAR
-- **[📍Guidance Task](#-guidance-task)**: Localization + waypoint following using ArUco.
-- **🧩Final Challenge**:  Full autonomous mission combining all above tasks.
   
-### 🔍 Perception Task
-
-Given the **Raspberry Pi 4B's** limited **4GB memory**, we opted for a lightweight **k-Nearest Neighbors (kNN)** classifier instead of deep CNNs. This approach was combined with classical **computer vision technique** such as **morphological treatments**, **custom filtering**, and **image preprocessing** to isolate digits from their background. Additionally, a **stadistic analysis** was employed for accurate **color detection**. This combination enabled **fast** and **reliable digit and color recognition** with **minimal computational overhead**.
-
-### 🛣️ Control Task
-In this challenge, the robot had to **autonomously navigate narrow hallways using only 2D LiDAR**, without predefined maps or waypoints. We developed a custom ROS 2 node, `linea_media.py`, that combines **local perception** and **global goal planning** via Nav2.
-
-The node continuously processes the LiDAR scan data (-80º to 80º), **identifies** the most **open path**, **projects the best direction** to the global `map` frame, and **publish a `PoseStamped` goal** to Nav2.
-
-Optimized for the **Raspberry Pi 4B**, it leverages lightweight methods like **block averaging, polar gap detection, and adaptive filtering** to ensure **real-time, robust, and safe operation**, validated in both simulation and on the competition floor.
-
-### 📍 Guidance Task 
-
-In this challenge, the robot had to **localize itself using ArUco markers** markers from an unknown starting position. This was handled by `brain.py` (a finite state machine (FSM) that coordinates all nodes) and `localizacion_aruco.py`, which scan **ArUco markers** and triggers an **odometry reset** via manual **frame transformations**.
-
-To ensure safty, the system loads a predifined `map` to keep the robot within fiel boundaries.
-
-## 🛠️ Development Environment
-
-### System Requirements 
-
-- **OS:** Ubuntu 22.04 LTS
-- **ROS 2:** Humble Hawksbill
-- **Hardware:**
-  - Raspberry Pi 4B (4 GB RAM)
-  - YDLidar X4
-  - Orbbec AstraPro Plus (RGB-D Camera)
-  - Adafruit BNO055 IMU
-  - Arduino (for Neopixel Led control)
-  - INA260n (for battery monitor)
-  - LiPo battery 4S
-  - Joystick controller
-  - Emergency button 
-  - Mechanical components based on the [NASA JPL Open Source Rover](https://github.com/nasa-jpl/open-source-rover)
-  
-### ⚠ Dependencies
-
-- `slam_toolbox` – Real-time SLAM and map generation.
-- `nav2` – Navigation and planning stack.
-- `rviz2`, `gazebo_ros` – Simulation and visualization
-- `rclpy`, `geometry_msgs`, `sensor_msgs`, `tf2_ros` – ROS core communication.
-- `OpenCV`, `numpy` – Computer vision and data ops.
-- `joy`, `teleop_twist_joy` – Manual joystick control.
-- `scickit-learn`- AI and image recognition
-
-## 📁 Repository Structure
-
-```bash
-├── src/
-│   ├── osr_bringup/            # Basic launch files and configuration for the OSR
-│   ├── osr_control/            
-│   ├── osr_control_challenge/  # Code for the control task
-│   ├── osr_gazebo/             # Simulation environment for Gazebo
-│   ├── osr_interfaces/         # Custom ROS messages
-│   ├── percepcion/             # Image recognition, color and digit detection
-│   ├── phoenyx_nodes/          # Multiple nodes for different tasks and applications
-│   ├── planificador/           # Package for custom launch and YAML configuration
-│   ├── guiado/                 # SLAM-based localization and waypoint navigation
-│   ├── control/                
-│   ├── datos/                  
-│   └── final/                  
-│
-├── LICENSE.md
-├── JPL_NASA_LICENCE.txt
-└── README.md
-
-```
 
 ## 🚦 How to Run the System
 
@@ -270,11 +199,35 @@ ros2 launch guiado guiado.launch.py
 >
 >  See [Orbbec ROS 2 README](https://github.com/PUCRA/Phoenyx/tree/main/OrbbecSDK_ROS2) for camera setup.
 
+
+## 📁 Repository Structure
+
+```bash
+├── src/
+│   ├── osr_bringup/            # Basic launch files and configuration for the OSR
+│   ├── osr_control/            
+│   ├── osr_control_challenge/  # Code for the control task
+│   ├── osr_gazebo/             # Simulation environment for Gazebo
+│   ├── osr_interfaces/         # Custom ROS messages
+│   ├── percepcion/             # Image recognition, color and digit detection
+│   ├── phoenyx_nodes/          # Multiple nodes for different tasks and applications
+│   ├── planificador/           # Package for custom launch and YAML configuration
+│   ├── guiado/                 # SLAM-based localization and waypoint navigation
+│   ├── control/                
+│   ├── datos/                  
+│   └── final/                  
+│
+├── LICENSE.md
+├── JPL_NASA_LICENCE.txt
+└── README.md
+
+```
+
 ## 🏁 Competition Results
 
 - 🥇 **First Place Overall – Bot Talent 2025**  
-- 🧠 **Awarded for Best Robot Design**   
-
+- 🧠 **Awarded for Best Robot Design**
+  
 ## License
 
 This main project, including all contributions by PUCRA and its collaborators, is licensed under the **[MIT License](LICENSE)**.
