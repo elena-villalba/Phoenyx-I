@@ -10,19 +10,20 @@
 > 
 > 🏆 **Winner of Best Overall Rover & Design Excellence** at **Sener-CEA's Bot Talent competition**.
 
- ## 👀 Watch PHOENYX-I in action 
+## 👀 Watch PHOENYX-I in action 
  
 <p align="center">
 
-[![Phoenyx I – Autonomous Rover Demo](https://img.youtube.com/vi/FE0RjScWbhM/maxresdefault.jpg)](https://www.youtube.com/watch?v=FE0RjScWbhM)
-
+[![Phoenyx I – Autonomous Rover Demo](https://img.youtube.com/vi/FE0RjScWbhM/maxresdefault.jpg)](https://www.youtube.com/watch?v=FE0RjScWbhM)<br>
 </p>
-
 
 | 🔍 Perception Task | 🛣️ Control Task | 📍 Guidance Task |
 |---|---|---|
-| [![Perception](https://img.youtube.com/vi/iHNUQLfxfGA/maxresdefault.jpg)](https://youtube.com/shorts/iHNUQLfxfGA) | [![Control](https://img.youtube.com/vi/iHNUQLfxfGA/maxresdefault.jpg)](https://youtube.com/shorts/iHNUQLfxfGA)  | [![Guidance](https://img.youtube.com/vi/iHNUQLfxfGA/maxresdefault.jpg)](https://youtube.com/shorts/iHNUQLfxfGA)|
+| [![Perception](https://img.youtube.com/vi/KKVDeQCz0RY/maxresdefault.jpg)](https://youtu.be/KKVDeQCz0RY) | [![Control](https://img.youtube.com/vi/z-JHUpsCd6w/maxresdefault.jpg)](https://youtu.be/z-JHUpsCd6w)  | [![Guidance](https://img.youtube.com/vi/otcly1f2bjU/maxresdefault.jpg)](https://youtu.be/otcly1f2bjU) |
 | <p align="center">Real-time digit and color recognition.</p> | <p align="center">Autonomous corridor navigation using only 2D LiDAR.</p> | <p align="center">Localization and waypoint navigation using ArUco markers.</p> |
+
+<p align="center"><sub>▶️ Click any image to watch the corresponding video on YouTube</sub></p>
+
 
 ---
 
