@@ -30,6 +30,7 @@ setup(
     entry_points={
         'console_scripts': [
             'maze_navigation = osr_control_challenge.maze_navigation:main',
+            'maze_navigation_real = osr_control_challenge.maze_navigation_real:main',
         ],
     },
 )

@@ -132,12 +132,14 @@ ros2 launch osr_control_challenge maze_navigation.launch.py maze:=maze_1.world r
 
 ### 🤖 On Real Robot 
 
-#### 🎮 Move With a Controller
+⚠️ Always start the robot bringup first in a separate terminal.
 
-Terminal 1
+Terminal 1 — Robot Bringup (Required for all tasks)
 ```bash
 ros2 launch osr_bringup osr_mod_launch.py
 ```
+
+#### 🎮 Move With a Controller
 
 Terminal 2
 ```bash
@@ -146,17 +148,21 @@ ros2 launch osr_bringup joystick.launch.py mode:=real
 
 #### 🔍 Perception task
 
+Terminal 2
 ``` bash
 ros2 launch osr_bringup perception_challenge.launch.py 
 ```
 
 #### 🛣️ Control task
- 
+
+Terminal 2
 ``` bash
 ros2 launch osr_bringup control_challenge.launch.py 
 ```
 
 #### 📍 Guidance task 
+
+Terminal 2
 ```bash
 ros2 launch guiado guiado.launch.py
 ```
